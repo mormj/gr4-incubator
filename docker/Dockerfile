@@ -2,6 +2,11 @@ FROM ubuntu:25.04
 LABEL authors="akrimm"
 
 ENV DEBIAN_FRONTEND=noninteractive
+ENV RUSTUP_HOME=/opt/rust
+ENV CARGO_HOME=/opt/rust
+ENV PATH=/opt/rust/bin:$PATH
+
+
 
 RUN apt-get update -q  && apt-get install --no-install-recommends -qy wget gpg ca-certificates software-properties-common \
     bash file locales build-essential sudo cmake git make ninja-build cppzmq-dev libfftw3-dev meson ninja-build \
@@ -21,7 +26,11 @@ RUN apt-get update -q  && apt-get install --no-install-recommends -qy wget gpg c
     libxcursor-dev \
     libxi-dev \
     libx11-dev \
+    curl ca-certificates \
     && rm -rf /var/lib/apt/lists/*
+
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
+    | sh -s -- -y --no-modify-path --profile minimal
 
 # UHD: download only B200 images and install udev rules
 ENV UHD_IMAGES_DIR=/usr/share/uhd/images

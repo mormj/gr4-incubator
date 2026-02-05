@@ -1,0 +1,106 @@
+#ifndef _GR4_PACKET_MODEM_MAPPER
+#define _GR4_PACKET_MODEM_MAPPER
+
+#include <gnuradio-4.0/Block.hpp>
+#include <gnuradio-4.0/packet-modem/pdu.hpp>
+#include <gnuradio-4.0/meta/reflection.hpp>
+#include <algorithm>
+#include <ranges>
+#include <vector>
+
+#include <format>
+namespace gr::packet_modem {
+
+template <typename TIn, typename TOut>
+class Mapper : public gr::Block<Mapper<TIn, TOut>>
+{
+public:
+    using Description = Doc<R""(
+@brief Mapper. Maps input elements according to a map defined by a vector.
+
+This block has a vector `map` whose size must be a power of 2, say `2^k`. For
+each input item, the block generates an output item by looking at the k LSBs of
+the input item and indexing the `map` using these k LSBs. The result is the
+output item. The data in the bits above the k LSBs in the input items is
+ignored.
+
+The block can be used for instance to implement a constellation modulator by
+mapping nibbles into constellation symbols.
+
+)"">;
+
+public:
+    size_t _mask;
+
+public:
+    gr::PortIn<TIn> in;
+    gr::PortOut<TOut> out;
+    std::vector<TOut> map;
+
+    void settingsChanged(const gr::property_map& /* old_settings */,
+                         const gr::property_map& /* new_settings */)
+    {
+        if (!std::has_single_bit(map.size())) {
+            throw gr::exception(
+                std::format("the map size must be a power of 2 (got {})", map.size()));
+        }
+        _mask = map.size() - 1;
+    }
+
+    [[nodiscard]] constexpr auto processOne(TIn a) const noexcept
+    {
+        return map[static_cast<size_t>(a) & _mask];
+    }
+
+    GR_MAKE_REFLECTABLE(Mapper, in, out, map);
+};
+
+template <typename TIn, typename TOut>
+class Mapper<Pdu<TIn>, Pdu<TOut>> : public gr::Block<Mapper<Pdu<TIn>, Pdu<TOut>>>
+{
+public:
+    using Description = Mapper<TIn, TOut>::Description;
+
+public:
+    size_t _mask;
+
+public:
+    gr::PortIn<Pdu<TIn>> in;
+    gr::PortOut<Pdu<TOut>> out;
+    std::vector<TOut> map;
+
+    void settingsChanged(const gr::property_map& /* old_settings */,
+                         const gr::property_map& /* new_settings */)
+    {
+        if (!std::has_single_bit(map.size())) {
+            throw gr::exception(
+                std::format("the map size must be a power of 2 (got {})", map.size()));
+        }
+        _mask = map.size() - 1;
+    }
+
+    void start()
+    {
+        if (!std::has_single_bit(map.size())) {
+            throw gr::exception(
+                std::format("the map size must be a power of 2 (got {})", map.size()));
+        }
+        _mask = map.size() - 1;
+    }
+
+    [[nodiscard]] constexpr Pdu<TOut> processOne(const Pdu<TIn>& pdu) const
+    {
+        Pdu<TOut> pdu_out = { std::vector<TOut>(pdu.data.size()), pdu.tags };
+        std::ranges::transform(pdu.data, pdu_out.data.begin(), [&](TIn a) {
+            return map[static_cast<size_t>(a) & _mask];
+        });
+        return pdu_out;
+    }
+    GR_MAKE_REFLECTABLE(Mapper, in, out, map);
+};
+
+} // namespace gr::packet_modem
+
+
+
+#endif // _GR4_PACKET_MODEM_MAPPER

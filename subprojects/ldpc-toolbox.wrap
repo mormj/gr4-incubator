@@ -1,0 +1,5 @@
+[wrap-git]
+directory = ldpc-toolbox
+url = https://github.com/daniestevez/ldpc-toolbox.git
+revision = v0.6.3
+patch_directory = ldpc-toolbox

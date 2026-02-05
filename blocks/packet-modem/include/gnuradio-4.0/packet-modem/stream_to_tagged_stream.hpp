@@ -1,0 +1,74 @@
+#ifndef _GR4_PACKET_MODEM_STREAM_TO_TAGGED_STREAM
+#define _GR4_PACKET_MODEM_STREAM_TO_TAGGED_STREAM
+
+#include <gnuradio-4.0/Block.hpp>
+#include <gnuradio-4.0/packet-modem/pmt_helpers.hpp>
+#include <gnuradio-4.0/meta/reflection.hpp>
+#include <algorithm>
+#include <cstddef>
+#include <ranges>
+
+#include <print>
+namespace gr::packet_modem {
+
+template <typename T>
+class StreamToTaggedStream : public gr::Block<StreamToTaggedStream<T>>
+{
+public:
+    using Description = Doc<R""(
+@brief Stream to Tagged Stream. Converts a stream into a stream of packets
+delimited by packet-length tags.
+
+This blocks inserts packet-length tags every `packet_length` items in order to
+convert a stream into a stream of packets delimited by packet-length tags. The
+value of these tags is `packet_length`.
+
+)"">;
+
+public:
+    uint64_t _count = 0;
+
+public:
+    gr::PortIn<T> in;
+    gr::PortOut<T> out;
+    uint64_t packet_length = 1;
+    std::string packet_len_tag_key = "packet_len";
+
+    void start() { _count = 0; }
+
+    gr::work::Status processBulk(::gr::InputSpanLike auto& inSpan,
+                                 ::gr::OutputSpanLike auto& outSpan)
+    {
+#ifdef TRACE
+        std::println(
+            "{}::processBulk(inSpan.size() = {}, outSpan.size = {}), _count = {}",
+            this->name,
+            inSpan.size(),
+            outSpan.size(),
+            _count);
+#endif
+        assert(inSpan.size() == outSpan.size());
+        assert(inSpan.size() > 0);
+        const auto n = inSpan.size();
+        std::ranges::copy_n(inSpan.begin(), static_cast<ssize_t>(n), outSpan.begin());
+        for (uint64_t index = _count == 0 ? 0 : packet_length - _count; index < n;
+             index += packet_length) {
+#ifdef TRACE
+            std::println("{} publishTag(index = {})", this->name, index);
+#endif
+            out.publishTag(
+                gr::packet_modem::make_props(
+                    { { packet_len_tag_key, gr::packet_modem::pmt_value(packet_length) } }),
+                static_cast<ssize_t>(index));
+        }
+        _count = (_count + n) % packet_length;
+        return gr::work::Status::OK;
+    }
+    GR_MAKE_REFLECTABLE(StreamToTaggedStream, in, out, packet_length, packet_len_tag_key);
+};
+
+} // namespace gr::packet_modem
+
+
+
+#endif // _GR4_PACKET_MODEM_STREAM_TO_TAGGED_STREAM

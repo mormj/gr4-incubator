@@ -1,0 +1,212 @@
+#ifndef _GR4_PACKET_MODEM_UNPACK_BITS
+#define _GR4_PACKET_MODEM_UNPACK_BITS
+
+#include <gnuradio-4.0/Block.hpp>
+#include <gnuradio-4.0/packet-modem/pmt_helpers.hpp>
+#include <gnuradio-4.0/packet-modem/endianness.hpp>
+#include <gnuradio-4.0/packet-modem/pdu.hpp>
+#include <gnuradio-4.0/meta/reflection.hpp>
+#include <algorithm>
+#include <numeric>
+#include <ranges>
+#include <stdexcept>
+
+#include <format>
+#include <print>
+namespace gr::packet_modem {
+
+template <Endianness endianness = Endianness::MSB,
+          typename TIn = uint8_t,
+          typename TOut = uint8_t>
+class UnpackBits : public gr::Block<UnpackBits<endianness, TIn, TOut>, gr::Resampling<>>
+{
+public:
+    using Description = Doc<R""(
+@brief Unpack Bits. Unpacks k*n-bit nibbles to k nibbles of n.
+
+This block performs the opposite function of Pack Bits. It assumes that the
+input items are formed by nibbles of `bits_per_output * outputs_per_input` bits
+LSBs of the item. It unpacks these nibbles into `outputs_per_input` output
+items, each of them containing `bits_per_output` bits of the corresponding input
+items. The output nibbles are placed on the LSBs of the output items. The order
+in which the input nibbles are unpacked in the output is given by the
+`Endianness` template parameters. If the order is `MSB`, then the
+`bits_per_output` MSBs of the input nibble are placed on the first output
+item. If the order is `LSB`, then the `bits_per_output` LSBs of the input nibble
+are placed on the output item. The bits within each `bits_per_output`-bit nibble
+are not rearranged regardless of the `Endianness` used.
+
+If the input items contain data in the bits above the `bits_per_input *
+outputs_per_input` LSBs, this data is discarded.
+
+As an example, using this block with `outputs_per_input = 8` and
+`bits_per_output = 1` serves to convert a packed 8-bits-per-byte input into an
+unpacked one-bit-per-byte output.
+
+By default this block operates on `uint8_t` input and output items, but it can
+use larger integers. This is required when the input or output nibbles have more
+than 8 bits. For example, using `TIn = uint16_t`, `outputs_per_input = 10` and
+`bits_per_output = 1` can be used to unpack 10 bits from a `uint16_t` input to a
+one-bit-per-byte `uint8_t` output. This could be used to unpack the bits in the
+symbols of a 1024QAM constellation.
+
+The block can optionally adjust the length of packet-length tags. If a non-empty
+string is supplied in the `packet_length_tag_key` constructor argument, the
+value of tags with that key will be multiplied by `outputs_per_input` in the
+output. It is assumed that the value of these tags can be converted to
+`uint64_t`. Otherwise, the block throws an exception.
+
+)"">;
+
+public:
+    TIn _mask;
+
+public:
+    gr::PortIn<TIn> in;
+    gr::PortOut<TOut> out;
+    size_t outputs_per_input = 1;
+    TIn bits_per_output = 1;
+    std::string packet_len_tag_key = "";
+
+    // this needs custom tag propagation because it overwrites tags
+
+    void settingsChanged(const gr::property_map& /* old_settings */,
+                         const gr::property_map& /* new_settings */)
+    {
+        if (outputs_per_input <= 0) {
+            throw gr::exception(std::format("outputs_per_input must be positive; got {}",
+                                            outputs_per_input));
+        }
+        if (bits_per_output <= 0) {
+            throw gr::exception(
+                std::format("bits_per_output must be positive; got {}", bits_per_output));
+        }
+        _mask = static_cast<TIn>(TIn{ 1 } << bits_per_output) - TIn{ 1 };
+        // set resampling for the scheduler
+        this->input_chunk_size = 1;
+        this->output_chunk_size = outputs_per_input;
+    }
+
+    static constexpr Endianness kEndianness = endianness;
+
+    gr::work::Status processBulk(::gr::InputSpanLike auto& inSpan,
+                                 ::gr::OutputSpanLike auto& outSpan)
+    {
+#ifdef TRACE
+        std::println("{}::processBulk(inSpan.size() = {}, outSpan.size() = {})",
+                     this->name,
+                     inSpan.size(),
+                     outSpan.size());
+#endif
+        assert(inSpan.size() == outSpan.size() / outputs_per_input);
+        assert(inSpan.size() > 0);
+        if (this->inputTagsPresent()) {
+            auto tag = this->mergedInputTag();
+            const auto len_it = gr::packet_modem::find_prop(tag.map, packet_len_tag_key);
+            if (!packet_len_tag_key.empty() && len_it != tag.map.end()) {
+                // Adjust the packet_len tag value and overwrite the output tag
+                // that is automatically propagated by the runtime.
+                const auto packet_len = gr::packet_modem::pmt_cast<uint64_t>(len_it->second);
+                gr::packet_modem::set_prop(tag.map,
+                                           packet_len_tag_key,
+                                           gr::packet_modem::pmt_value(packet_len * outputs_per_input));
+            }
+            out.publishTag(tag.map, 0);
+        }
+
+        auto out_item = outSpan.begin();
+        for (auto& in_item : inSpan) {
+            if constexpr (kEndianness == Endianness::MSB) {
+                TIn shift = bits_per_output * static_cast<TIn>(outputs_per_input - 1U);
+                for (auto _ : std::views::iota(0UZ, outputs_per_input)) {
+                    *out_item++ = static_cast<TOut>((in_item >> shift) & _mask);
+                    shift -= bits_per_output;
+                }
+            } else {
+                static_assert(kEndianness == Endianness::LSB);
+                TIn item = in_item;
+                for (auto _ : std::views::iota(0UZ, outputs_per_input)) {
+                    *out_item++ = static_cast<TOut>(item & _mask);
+                    item >>= bits_per_output;
+                }
+            }
+        }
+
+        return gr::work::Status::OK;
+    }
+
+    GR_MAKE_REFLECTABLE(UnpackBits, in, out, outputs_per_input, bits_per_output, packet_len_tag_key);
+};
+
+template <Endianness endianness, typename TIn, typename TOut>
+class UnpackBits<endianness, Pdu<TIn>, Pdu<TOut>>
+    : public gr::Block<UnpackBits<endianness, Pdu<TIn>, Pdu<TOut>>>
+{
+public:
+    using Description = UnpackBits<endianness, TIn, TOut>::Description;
+
+public:
+    TIn _mask;
+
+public:
+    gr::PortIn<Pdu<TIn>> in;
+    gr::PortOut<Pdu<TOut>> out;
+    size_t outputs_per_input = 1;
+    TIn bits_per_output = 1;
+    std::string packet_len_tag_key = "";
+
+    void settingsChanged(const gr::property_map& /* old_settings */,
+                         const gr::property_map& /* new_settings */)
+    {
+        if (outputs_per_input <= 0) {
+            throw gr::exception(std::format("outputs_per_input must be positive; got {}",
+                                            outputs_per_input));
+        }
+        if (bits_per_output <= 0) {
+            throw gr::exception(
+                std::format("bits_per_output must be positive; got {}", bits_per_output));
+        }
+        _mask = static_cast<TIn>(TIn{ 1 } << bits_per_output) - TIn{ 1 };
+    }
+
+    static constexpr Endianness kEndianness = endianness;
+
+    [[nodiscard]] Pdu<TOut> processOne(const Pdu<TIn>& pdu)
+    {
+        Pdu<TOut> pdu_out;
+        pdu_out.data.reserve(pdu.data.size() * outputs_per_input);
+        pdu_out.tags.reserve(pdu.tags.size());
+
+        for (const auto& in_item : pdu.data) {
+            if constexpr (kEndianness == Endianness::MSB) {
+                TIn shift = bits_per_output * static_cast<TIn>(outputs_per_input - 1U);
+                for (auto _ : std::views::iota(0UZ, outputs_per_input)) {
+                    pdu_out.data.push_back(static_cast<TOut>((in_item >> shift) & _mask));
+                    shift -= bits_per_output;
+                }
+            } else {
+                static_assert(kEndianness == Endianness::LSB);
+                TIn item = in_item;
+                for (auto _ : std::views::iota(0UZ, outputs_per_input)) {
+                    pdu_out.data.push_back(static_cast<TOut>(item & _mask));
+                    item >>= bits_per_output;
+                }
+            }
+        }
+
+        std::ranges::transform(
+            pdu.tags, std::back_inserter(pdu_out.tags), [&](gr::Tag tag) {
+                tag.index *= static_cast<decltype(tag.index)>(outputs_per_input);
+                return tag;
+            });
+
+        return pdu_out;
+    }
+    GR_MAKE_REFLECTABLE(UnpackBits, in, out, outputs_per_input, bits_per_output, packet_len_tag_key);
+};
+
+} // namespace gr::packet_modem
+
+
+
+#endif // _GR4_PACKET_MODEM_UNPACK_BITS

@@ -1,0 +1,73 @@
+#include <gnuradio-4.0/Graph.hpp>
+#include <gnuradio-4.0/Scheduler.hpp>
+#include <gnuradio-4.0/packet-modem/scheduler_helpers.hpp>
+#include <gnuradio-4.0/packet-modem/item_strobe.hpp>
+#include <gnuradio-4.0/packet-modem/packet_strobe.hpp>
+#include <gnuradio-4.0/packet-modem/packet_to_stream.hpp>
+#include <gnuradio-4.0/packet-modem/throttle.hpp>
+#include <gnuradio-4.0/packet-modem/vector_sink.hpp>
+#include <gnuradio-4.0/packet-modem/vector_source.hpp>
+#include <gnuradio-4.0/packet-modem/pmt_helpers.hpp>
+#include <boost/ut.hpp>
+#include <chrono>
+#include <numeric>
+#include <thread>
+
+#include <print>
+int main()
+{
+    using namespace boost::ut;
+
+    gr::Graph fg;
+
+    const double samp_rate = 100e3;
+    size_t packet_len = 25;
+    // auto& source = fg.emplaceBlock<gr::packet_modem::PacketStrobe<int>>(
+    //     { { "packet_len", uint64_t{ packet_len } },
+    //       { "interval_secs", 0.01 },
+    //       { "packet_len_tag_key", "packet_len" },
+    //       { "sleep", false } });
+    auto& source =
+        fg.emplaceBlock<gr::packet_modem::ItemStrobe<gr::packet_modem::Pdu<int>>>(
+            { { "interval_secs", 0.01 }, { "sleep", false } });
+    source.item = gr::packet_modem::Pdu<int>{ std::vector<int>(packet_len), {} };
+    // auto& packet_to_stream = fg.emplaceBlock<gr::packet_modem::PacketToStream<int>>();
+    auto& packet_to_stream =
+        fg.emplaceBlock<gr::packet_modem::PacketToStream<gr::packet_modem::Pdu<int>>>();
+    auto& throttle = fg.emplaceBlock<gr::packet_modem::Throttle<int>>(
+        { { "sample_rate", samp_rate }, { "maximum_items_per_chunk", 1000UZ } });
+    auto& sink = fg.emplaceBlock<gr::packet_modem::VectorSink<int>>();
+    expect(eq(gr::ConnectionResult::SUCCESS,
+              fg.connect<"out">(source).to<"in">(packet_to_stream)));
+    expect(eq(gr::ConnectionResult::SUCCESS,
+              fg.connect<"out">(packet_to_stream).to<"in">(throttle)));
+    expect(eq(gr::ConnectionResult::SUCCESS, fg.connect<"out">(throttle).to<"in">(sink)));
+
+    gr::scheduler::Simple<gr::scheduler::ExecutionPolicy::singleThreaded> sched;
+    gr::packet_modem::init_scheduler(sched, std::move(fg));
+    gr::MsgPortOut toScheduler;
+    expect(eq(gr::ConnectionResult::SUCCESS, toScheduler.connect(sched.msgIn)));
+    std::thread stopper([&toScheduler]() {
+        std::this_thread::sleep_for(std::chrono::seconds(2));
+        gr::sendMessage<gr::message::Command::Set>(toScheduler,
+                                                   "",
+                                                   gr::block::property::kLifeCycleState,
+                                                   { { "state", "REQUESTED_STOP" } });
+    });
+    const auto ret = sched.runAndWait();
+    stopper.join();
+    expect(ret.has_value());
+    if (!ret.has_value()) {
+        std::println("scheduler error: {}", ret.error());
+    }
+
+    const auto data = sink.data();
+    std::print("vector sink contains {} items\n", data.size());
+    std::print("vector sink tags:\n");
+    const auto sink_tags = sink.tags();
+    for (const auto& t : sink_tags) {
+        std::print("index = {}, map = {}\n", t.index, t.map);
+    }
+
+    return 0;
+}

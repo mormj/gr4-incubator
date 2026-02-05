@@ -1,0 +1,63 @@
+#include <gnuradio-4.0/Graph.hpp>
+#include <gnuradio-4.0/Scheduler.hpp>
+#include <gnuradio-4.0/packet-modem/scheduler_helpers.hpp>
+#include <gnuradio-4.0/packet-modem/header_formatter.hpp>
+#include <gnuradio-4.0/packet-modem/item_strobe.hpp>
+#include <gnuradio-4.0/packet-modem/vector_sink.hpp>
+#include <gnuradio-4.0/packet-modem/pmt_helpers.hpp>
+#include <boost/ut.hpp>
+#include <thread>
+
+#include <print>
+int main()
+{
+    using namespace boost::ut;
+
+    gr::Graph fg;
+
+    const gr::property_map message =
+        gr::packet_modem::make_props({ { "packet_length", gr::packet_modem::pmt_value(1234U) },
+                                       { "packet_type", gr::packet_modem::pmt_value("user_data") } });
+    auto& strobe = fg.emplaceBlock<gr::packet_modem::ItemStrobe<gr::Message>>(
+        gr::packet_modem::make_props({ { "interval_secs", gr::packet_modem::pmt_value(0.1) } }));
+    strobe.item.data = message;
+    auto& header_formatter = fg.emplaceBlock<gr::packet_modem::HeaderFormatter<>>();
+    auto& sink = fg.emplaceBlock<gr::packet_modem::VectorSink<uint8_t>>();
+    expect(eq(gr::ConnectionResult::SUCCESS,
+              fg.connect<"out">(strobe).to<"metadata">(header_formatter)));
+    expect(eq(gr::ConnectionResult::SUCCESS,
+              fg.connect<"out">(header_formatter).to<"in">(sink)));
+
+    gr::scheduler::Simple sched;
+    gr::packet_modem::init_scheduler(sched, std::move(fg));
+    gr::MsgPortOut toScheduler;
+    expect(eq(gr::ConnectionResult::SUCCESS, toScheduler.connect(sched.msgIn)));
+
+    std::thread stopper([&toScheduler]() {
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+        std::print("sending REQUEST_STOP to scheduler\n");
+        gr::sendMessage<gr::message::Command::Set>(
+            toScheduler,
+            "",
+            gr::block::property::kLifeCycleState,
+            gr::packet_modem::make_props({ { "state", gr::packet_modem::pmt_value("REQUESTED_STOP") } }));
+    });
+
+    expect(sched.runAndWait().has_value());
+    stopper.join();
+
+    const auto data = sink.data();
+    std::print("vector sink contains {} items\n", data.size());
+    std::print("vector sink items:\n");
+    for (const auto n : data) {
+        std::print("{} ", n);
+    }
+    std::print("\n");
+    std::print("vector sink tags:\n");
+    const auto sink_tags = sink.tags();
+    for (const auto& t : sink_tags) {
+        std::print("index = {}, map = {}\n", t.index, t.map);
+    }
+
+    return 0;
+}

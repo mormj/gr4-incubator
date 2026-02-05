@@ -1,0 +1,87 @@
+#include <gnuradio-4.0/Graph.hpp>
+#include <gnuradio-4.0/Scheduler.hpp>
+#include <gnuradio-4.0/packet-modem/scheduler_helpers.hpp>
+#include <gnuradio-4.0/packet-modem/pack_bits.hpp>
+#include <gnuradio-4.0/packet-modem/unpack_bits.hpp>
+#include <gnuradio-4.0/packet-modem/vector_sink.hpp>
+#include <gnuradio-4.0/packet-modem/vector_source.hpp>
+#include <gnuradio-4.0/packet-modem/pmt_helpers.hpp>
+#include <boost/ut.hpp>
+
+#include <print>
+int main()
+{
+    using namespace boost::ut;
+
+    gr::Graph fg;
+
+    const std::vector<uint8_t> v = { 0, 1, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0 };
+    // This works as expected
+    const std::vector<gr::Tag> tags = {
+        { 0,
+          gr::packet_modem::make_props({
+              { "zero", gr::packet_modem::pmt_null() },
+              { "packet_len", gr::packet_modem::pmt_value(8U) },
+          }) },
+        { 1, gr::packet_modem::make_props({ { "one", gr::packet_modem::pmt_null() } }) },
+        { 2, gr::packet_modem::make_props({ { "two", gr::packet_modem::pmt_null() } }) },
+        { 8, gr::packet_modem::make_props({ { "packet_len", gr::packet_modem::pmt_value(4U) } }) },
+    };
+    auto& source = fg.emplaceBlock<gr::packet_modem::VectorSource<uint8_t>>();
+    source.data = v;
+    source.tags = tags;
+    auto& pack = fg.emplaceBlock<gr::packet_modem::PackBits<>>(
+        gr::packet_modem::make_props({
+            { "inputs_per_output", gr::packet_modem::pmt_value(2UZ) },
+            { "bits_per_input", gr::packet_modem::pmt_value(uint8_t{ 1 }) },
+            { "packet_len_tag_key", gr::packet_modem::pmt_value("packet_len") },
+        }));
+    auto& sink = fg.emplaceBlock<gr::packet_modem::VectorSink<uint8_t>>();
+    auto& unpack = fg.emplaceBlock<gr::packet_modem::UnpackBits<>>(
+        gr::packet_modem::make_props({
+            { "outputs_per_input", gr::packet_modem::pmt_value(2UZ) },
+            { "bits_per_output", gr::packet_modem::pmt_value(uint8_t{ 1 }) },
+            { "packet_len_tag_key", gr::packet_modem::pmt_value("packet_len") },
+        }));
+    auto& sink_unpacked = fg.emplaceBlock<gr::packet_modem::VectorSink<uint8_t>>();
+    expect(eq(gr::ConnectionResult::SUCCESS, fg.connect<"out">(source).to<"in">(pack)));
+    expect(eq(gr::ConnectionResult::SUCCESS, fg.connect<"out">(pack).to<"in">(unpack)));
+    expect(eq(gr::ConnectionResult::SUCCESS, fg.connect<"out">(pack).to<"in">(sink)));
+    expect(eq(gr::ConnectionResult::SUCCESS,
+              fg.connect<"out">(unpack).to<"in">(sink_unpacked)));
+
+    gr::scheduler::Simple sched;
+    gr::packet_modem::init_scheduler(sched, std::move(fg));
+    expect(sched.runAndWait().has_value());
+
+    std::print("PACKED VECTOR SINK\n");
+    std::print("==================\n");
+    const auto data = sink.data();
+    std::print("vector sink contains {} items\n", data.size());
+    std::print("vector sink items:\n");
+    for (const auto n : data) {
+        std::print("{} ", n);
+    }
+    std::print("\n");
+    std::print("vector sink tags:\n");
+    for (const auto& t : sink.tags()) {
+        std::print("index = {}, map = {}\n", t.index, t.map);
+    }
+    std::print("\n");
+
+    std::print("UNPACKED VECTOR SINK\n");
+    std::print("====================\n");
+    const auto data_unpacked = sink_unpacked.data();
+    std::print("vector sink contains {} items\n", data_unpacked.size());
+    std::print("vector sink items:\n");
+    for (const auto n : data_unpacked) {
+        std::print("{} ", n);
+    }
+    std::print("\n");
+    std::print("vector sink tags:\n");
+    for (const auto& t : sink_unpacked.tags()) {
+        std::print("index = {}, map = {}\n", t.index, t.map);
+    }
+
+    return 0;
+}

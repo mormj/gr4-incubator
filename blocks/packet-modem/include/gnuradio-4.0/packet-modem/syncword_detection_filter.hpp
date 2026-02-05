@@ -1,0 +1,219 @@
+#ifndef _GR4_PACKET_MODEM_SYNCWORD_DETECTION_FILTER
+#define _GR4_PACKET_MODEM_SYNCWORD_DETECTION_FILTER
+
+#include <gnuradio-4.0/Block.hpp>
+#include <gnuradio-4.0/packet-modem/pmt_helpers.hpp>
+#include <gnuradio-4.0/meta/reflection.hpp>
+#include <complex>
+
+#include <format>
+#include <print>
+namespace gr::packet_modem {
+
+template <typename T = std::complex<float>>
+class SyncwordDetectionFilter : public gr::Block<SyncwordDetectionFilter<T>>
+{
+public:
+    using Description = Doc<R""(
+@brief Syncword Detection Filter.
+
+The Syncword Detection Filter is used to filter out false syncword detections
+that may occur mid-packet if some of the scrambled packet payload correlates
+strongly with the syncword. Without this block, such a false syncword detection
+will likely prevent correct packet decoding by setting the Coarse Frequency
+Correction to a wrong frequency mid-packet.
+
+The Syncword Detection Filter detects the beginning of a packet by looking at
+the syncword_ tags inserted by Syncword Detection. When a packet begins, the
+block only lets the samples of the syncword and header, plus some small margin
+go through. It waits to receive a header decode that either indicates the packet
+length or an invalid header decode (in which case it immediately considers that
+the packet has finished after the header). In this way, the Syncword Detection
+Filter keeps track of wheter a particular sample is inside of a packet or
+not. If syncword_ tags are received inside a packet, they are dropped.
+
+)"">;
+
+public:
+    bool _in_packet = false;
+    size_t _position = 0;
+    size_t _block_until = 0;
+
+public:
+    gr::PortIn<gr::Message, gr::Async> parsed_header;
+    gr::PortIn<gr::Message, gr::Async> ignored_syncword;
+    gr::PortIn<T> in;
+    gr::PortOut<T> out;
+    size_t samples_per_symbol = 4;
+    size_t syncword_size = 64;
+    size_t header_size = 128;
+    size_t allowed_margin = 16; // symbols
+
+
+    void start() { _in_packet = false; }
+
+    gr::work::Status processBulk(::gr::InputSpanLike auto& headerSpan,
+                                 ::gr::InputSpanLike auto& ignoredSpan,
+                                 ::gr::InputSpanLike auto& inSpan,
+                                 ::gr::OutputSpanLike auto& outSpan)
+    {
+        using namespace std::string_literals;
+
+#ifdef TRACE
+        std::println(
+            "{}::processBulk(headerSpan.size() = {}, ignoredSpan.size() = {}, "
+            "inSpan.size() = {}, outSpan.size() = {}), _in_packet = {}, _position = {}, "
+            "_block_until = {}",
+            this->name,
+            headerSpan.size(),
+            ignoredSpan.size(),
+            inSpan.size(),
+            outSpan.size(),
+            _in_packet,
+            _position,
+            _block_until);
+#endif
+        if (this->inputTagsPresent()) {
+            auto tag = this->mergedInputTag();
+            gr::property_map output_tags;
+#ifdef TRACE
+            std::println("{} tag.map = {}", this->name, tag.map);
+#endif
+            bool new_in_packet = false;
+            for (auto const& [key, val] : tag.map) {
+                if (key.starts_with("syncword_"s)) {
+                    // only pass syncword tags to output if we're not inside a packet
+                    if (!_in_packet) {
+                        new_in_packet = true;
+                        output_tags[key] = val;
+                    }
+                } else {
+                    // non-syncword tag; pass it to output
+                    output_tags[key] = val;
+                }
+            }
+            if (new_in_packet) {
+                _in_packet = true;
+                _position = 0;
+                _block_until = 0; // packet size yet unknown
+            }
+            if (!output_tags.empty()) {
+#ifdef TRACE
+                std::println("{} publishTag() output_tags = {}", this->name, output_tags);
+#endif
+                out.publishTag(output_tags, 0);
+            }
+        }
+
+        if (!_in_packet) {
+            const size_t n = std::min(inSpan.size(), outSpan.size());
+            std::copy_n(inSpan.begin(), n, outSpan.begin());
+            if (!headerSpan.consume(0)) {
+                throw gr::exception("headerSpan.consume(0) failed");
+            }
+            if (!ignoredSpan.consume(0)) {
+                throw gr::exception("ignoredSpan.consume(0) failed");
+            }
+            if (!inSpan.consume(n)) {
+                throw gr::exception(std::format("inSpan.consume({}) failed", n));
+            }
+            outSpan.publish(n);
+            // _mergedInputTag.map.clear() only gets called automatically by the
+            // block forwardTags() whenever the block consumes some samples on
+            // all inputs and produces some samples on all outputs. Here it
+            // needs to be called manually, because the block hasn't consumed
+            // samples in ignoredSpan or headerSpan.
+            this->_mergedInputTag.map.clear();
+#ifdef TRACE
+            std::println("{} consumed = {}, header_consumed = 0", this->name, n, 0);
+#endif
+            return gr::work::Status::OK;
+        }
+
+        size_t header_consumed = 0;
+
+        if (_block_until == 0 && headerSpan.size() > 0) {
+            auto meta = headerSpan[0].data.value();
+            header_consumed = 1;
+            if (gr::packet_modem::has_prop(meta, "invalid_header")) {
+                // header decode failed; we are no longer inside packet
+                _block_until = 1;
+            } else {
+                const uint64_t packet_length =
+                    gr::packet_modem::pmt_cast<uint64_t>(meta.at("packet_length"));
+                if (packet_length == 0) {
+                    throw gr::exception("received packet_length = 0");
+                }
+                // packet_length is in bytes, and we use QPSK modulation for the
+                // packet. We also need to add the CRC-32
+                constexpr size_t crc_size_bytes = 4;
+                const size_t payload_symbols = (packet_length + crc_size_bytes) * 4;
+                _block_until = samples_per_symbol * (header_size + syncword_size -
+                                                     allowed_margin + payload_symbols);
+            }
+        }
+
+        size_t ignored_consumed = 0;
+
+        if (_block_until == 0 && ignoredSpan.size() > 0) {
+            ignored_consumed = 1;
+            _block_until = 1;
+        }
+
+        size_t consumed = 0;
+
+        const size_t allowed =
+            samples_per_symbol * (syncword_size + header_size + allowed_margin);
+        if (_position < allowed) {
+            const size_t n =
+                std::min({ inSpan.size(), outSpan.size(), allowed - _position });
+            std::copy_n(inSpan.begin(), n, outSpan.begin());
+            _position += n;
+            consumed = n;
+        }
+
+        if (_position >= allowed && _block_until != 0) {
+            // packet size already known
+            const size_t n = std::min(inSpan.size(), outSpan.size()) - consumed;
+            std::copy_n(inSpan.begin() + static_cast<ssize_t>(consumed),
+                        n,
+                        outSpan.begin() + static_cast<ssize_t>(consumed));
+            _position += n;
+            consumed += n;
+            if (_position >= _block_until) {
+                _in_packet = false;
+            }
+        }
+
+        if (!inSpan.consume(consumed)) {
+            throw gr::exception(std::format("inSpan.consume({}) failed", consumed));
+        }
+        if (!headerSpan.consume(header_consumed)) {
+            throw gr::exception(std::format("headerSpan.consume({})", header_consumed));
+        }
+        if (!ignoredSpan.consume(ignored_consumed)) {
+            throw gr::exception(std::format("ignoredSpan.consume({})", ignored_consumed));
+        }
+        outSpan.publish(consumed);
+        // _mergedInputTag.map.clear() only gets called automatically by the
+        // block forwardTags() whenever the block consumes some samples on all
+        // inputs and produces some samples on all outputs. Here it needs to be
+        // called manually, because the block might have not consumed samples in
+        // ignoredSpan or headerSpan.
+        this->_mergedInputTag.map.clear();
+#ifdef TRACE
+        std::println("{} consumed = {}, header_consumed = {}",
+                     this->name,
+                     consumed,
+                     header_consumed);
+#endif
+        return gr::work::Status::OK;
+    }
+    GR_MAKE_REFLECTABLE(SyncwordDetectionFilter, parsed_header, ignored_syncword, in, out, samples_per_symbol, syncword_size, header_size);
+};
+
+} // namespace gr::packet_modem
+
+
+
+#endif // _GR4_PACKET_MODEM_SYNCWORD_DETECTION_FILTER

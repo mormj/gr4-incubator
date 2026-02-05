@@ -1,0 +1,226 @@
+#ifndef _GR4_PACKET_MODEM_PACK_BITS
+#define _GR4_PACKET_MODEM_PACK_BITS
+
+#include <gnuradio-4.0/Block.hpp>
+#include <gnuradio-4.0/packet-modem/pmt_helpers.hpp>
+#include <gnuradio-4.0/packet-modem/endianness.hpp>
+#include <gnuradio-4.0/packet-modem/pdu.hpp>
+#include <gnuradio-4.0/meta/reflection.hpp>
+#include <algorithm>
+#include <numeric>
+#include <ranges>
+#include <stdexcept>
+
+#include <format>
+#include <print>
+namespace gr::packet_modem {
+
+template <Endianness endianness = Endianness::MSB,
+          typename TIn = uint8_t,
+          typename TOut = uint8_t>
+class PackBits : public gr::Block<PackBits<endianness, TIn, TOut>, gr::Resampling<>>
+{
+public:
+    using Description = Doc<R""(
+@brief Pack Bits. Packs k nibbles of n bits into k*n-bit nibbles.
+
+This block assumes that the input items are formed by nibbles of
+`bits_per_input` bits placed in the LSBs of the item. It packs these nibbles in
+`inputs_per_output` input items to form an output sample, which contains a
+nibble of `bits_per_input * inputs_per_output` bits in which the nibbles in the
+corresponding input items have been concatenated. The order of this
+concatenation is given by the `Endianness` template parameter. If the order is
+`MSB`, then the nibble in the first item is placed in the MSBs of the
+concatenated nibble. If the order is `LSB`, then the nibble in the first item is
+placed in the LSBs of the concatenated nibble. The bits within each input nibble
+are not rearranged regardless of the `Endianness` used.
+
+If the input items contain data in the bits above the `bits_per_input` LSBs,
+this data is discarded.
+
+As an example, using this block with `inputs_per_output = 8` and
+`bits_per_input = 1` serves to convert an unpacked one-bit-per-byte input into a
+packed 8-bits-per-byte output.
+
+By default this block operates on `uint8_t` input and output items, but it can
+use larger integers. This is required when the input or output nibbles have more
+than 8 bits. For example, using `TOut = uint16_t`, `inputs_per_output = 10` and
+`bits_per_input = 1` can be used to pack 10 bits from a one-bit-per-byte
+`uint8_t` input into 10-bit nibbles in a `uint16_t` output.  This could be used
+to feed a 1024QAM constellation modulator.
+
+The block can optionally adjust the length of packet-length tags. If a non-empty
+string is supplied in the `packet_length_tag_key` constructor argument, the
+value of tags with that key will be dividied by `inputs_per_output` in the
+output. It is assumed that the value of these tags can be converted to
+`uint64_t` and is divisible by `inputs_per_output`. Otherwise, the block returns
+an error.
+
+)"">;
+
+public:
+    TIn _mask = TIn{ 1 };
+
+public:
+    gr::PortIn<TIn> in;
+    gr::PortOut<TOut> out;
+    size_t inputs_per_output = 1;
+    TIn bits_per_input = TIn{ 1 };
+    std::string packet_len_tag_key = "";
+
+    // this needs custom tag propagation because it overwrites tags
+
+    void settingsChanged(const gr::property_map& /* old_settings */,
+                         const gr::property_map& /* new_settings */)
+    {
+        if (inputs_per_output <= 0) {
+            throw gr::exception(std::format("inputs_per_output must be positive; got {}",
+                                            inputs_per_output));
+        }
+        if (bits_per_input <= 0) {
+            throw gr::exception(
+                std::format("bits_per_input must be positive; got {}", bits_per_input));
+        }
+        _mask = static_cast<TIn>(TIn{ 1 } << bits_per_input) - TIn{ 1 };
+        // set resampling for the scheduler
+        this->input_chunk_size = inputs_per_output;
+        this->output_chunk_size = 1;
+    }
+
+    static constexpr Endianness kEndianness = endianness;
+
+    gr::work::Status processBulk(::gr::InputSpanLike auto& inSpan,
+                                 ::gr::OutputSpanLike auto& outSpan)
+    {
+#ifdef TRACE
+        std::println("{}::processBulk(inSpan.size() = {}, outSpan.size() = {})",
+                     this->name,
+                     inSpan.size(),
+                     outSpan.size());
+#endif
+        assert(inSpan.size() / inputs_per_output == outSpan.size());
+        assert(outSpan.size() > 0);
+        if (this->inputTagsPresent()) {
+            auto tag = this->mergedInputTag();
+            const auto len_it = gr::packet_modem::find_prop(tag.map, packet_len_tag_key);
+            if (!packet_len_tag_key.empty() && len_it != tag.map.end()) {
+                // Adjust the packet_len tag value and overwrite the output tag
+                // that is automatically propagated by the runtime.
+                const auto packet_len = gr::packet_modem::pmt_cast<uint64_t>(len_it->second);
+                if (packet_len % inputs_per_output) {
+                    this->emitErrorMessage(
+                        std::format("{}::processBulk", this->name),
+                        std::format("packet_len {} is not divisible by "
+                                    "inputs_per_output {}",
+                                    packet_len,
+                                    inputs_per_output));
+                    this->requestStop();
+                    return gr::work::Status::ERROR;
+                }
+                gr::packet_modem::set_prop(tag.map,
+                                           packet_len_tag_key,
+                                           gr::packet_modem::pmt_value(packet_len / inputs_per_output));
+            }
+            out.publishTag(tag.map, 0);
+        }
+
+        auto in_item = inSpan.begin();
+        for (auto& out_item : outSpan) {
+            TOut join = TOut{ 0 };
+            TOut shift = TOut{ 0 };
+            for (auto _ : std::views::iota(0UZ, inputs_per_output)) {
+                const TOut chunk = static_cast<TOut>(*in_item++) & _mask;
+                if constexpr (kEndianness == Endianness::MSB) {
+                    join = static_cast<TOut>(join << static_cast<TOut>(bits_per_input)) |
+                           chunk;
+                } else {
+                    static_assert(kEndianness == Endianness::LSB);
+                    join |= chunk << shift;
+                    shift += static_cast<TOut>(bits_per_input);
+                }
+            }
+            out_item = join;
+        }
+
+        return gr::work::Status::OK;
+    }
+
+    GR_MAKE_REFLECTABLE(PackBits, in, out, inputs_per_output, bits_per_input, packet_len_tag_key);
+};
+
+template <Endianness endianness, typename TIn, typename TOut>
+class PackBits<endianness, Pdu<TIn>, Pdu<TOut>>
+    : public gr::Block<PackBits<endianness, Pdu<TIn>, Pdu<TOut>>>
+{
+public:
+    using Description = PackBits<endianness, TIn, TOut>::Description;
+
+public:
+    TIn _mask = TIn{ 1 };
+
+public:
+    gr::PortIn<Pdu<TIn>> in;
+    gr::PortOut<Pdu<TOut>> out;
+    size_t inputs_per_output = 1;
+    TIn bits_per_input = TIn{ 1 };
+    std::string packet_len_tag_key = "";
+
+    void settingsChanged(const gr::property_map& /* old_settings */,
+                         const gr::property_map& /* new_settings */)
+    {
+        if (inputs_per_output <= 0) {
+            throw gr::exception(std::format("inputs_per_output must be positive; got {}",
+                                            inputs_per_output));
+        }
+        if (bits_per_input <= 0) {
+            throw gr::exception(
+                std::format("bits_per_input must be positive; got {}", bits_per_input));
+        }
+        _mask = static_cast<TIn>(TIn{ 1 } << bits_per_input) - TIn{ 1 };
+    }
+
+    static constexpr Endianness kEndianness = endianness;
+
+    [[nodiscard]] Pdu<TOut> processOne(const Pdu<TIn>& pdu)
+    {
+        if (pdu.data.size() % inputs_per_output != 0) {
+            throw gr::exception("input PDU size not divisible by inputs_per_output");
+        }
+        Pdu<TOut> pdu_out;
+        pdu_out.data.reserve(pdu.data.size() / inputs_per_output);
+        pdu_out.tags.reserve(pdu.tags.size());
+
+        auto in_item = pdu.data.cbegin();
+        while (in_item != pdu.data.cend()) {
+            TOut join = TOut{ 0 };
+            TOut shift = TOut{ 0 };
+            for (auto _ : std::views::iota(0UZ, inputs_per_output)) {
+                const TOut chunk = static_cast<TOut>(*in_item++) & _mask;
+                if constexpr (kEndianness == Endianness::MSB) {
+                    join = static_cast<TOut>(join << static_cast<TOut>(bits_per_input)) |
+                           chunk;
+                } else {
+                    static_assert(kEndianness == Endianness::LSB);
+                    join |= chunk << shift;
+                    shift += static_cast<TOut>(bits_per_input);
+                }
+            }
+            pdu_out.data.push_back(join);
+        }
+
+        std::ranges::transform(
+            pdu.tags, std::back_inserter(pdu_out.tags), [&](gr::Tag tag) {
+                tag.index /= static_cast<decltype(tag.index)>(inputs_per_output);
+                return tag;
+            });
+
+        return pdu_out;
+    }
+    GR_MAKE_REFLECTABLE(PackBits, in, out, inputs_per_output, bits_per_input, packet_len_tag_key);
+};
+
+} // namespace gr::packet_modem
+
+
+
+#endif // _GR4_PACKET_MODEM_PACK_BITS

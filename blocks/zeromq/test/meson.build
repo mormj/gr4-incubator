@@ -1,6 +1,5 @@
 tests = [
-  # disable ZmqPushPull test for now
-  # ['qa_ZmqPushPull', ['qa_ZmqPushPull.cpp'], [gr4_zmq_blocks_dep]],
+  ['qa_ZmqPushPull', ['qa_ZmqPushPull.cpp'], [gr4_zmq_blocks_dep]],
 ]
 
 common_deps = [gr4_dep, ut_dep]
