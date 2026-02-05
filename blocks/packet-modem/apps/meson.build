@@ -12,6 +12,6 @@ foreach exe_name : app_names
     exe_name,
     exe_name + '.cpp',
     include_directories: [include_directories('..')],
-    dependencies: [gr4_packet_modem_blocks_dep, gr4_zmq_blocks_dep],
+    dependencies: [gr4_packet_modem_blocks_dep, gr4_zmq_blocks_dep, gr4_soapysdr_blocks_dep],
   )
 endforeach

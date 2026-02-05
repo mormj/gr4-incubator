@@ -15,8 +15,8 @@ boost::ut::suite MultiplyPacketLenTagTests = [] {
     "multiply_packet_len_tag"_test = [] {
         Graph fg;
         const std::vector<Tag> tags = {
-            { 0, make_props({ { "packet_len", pmt_value(7UZ) } }) },
-            { 7, make_props({ { "packet_len", pmt_value(23UZ) } }) }
+            { 0, make_props({ { "packet_len", 7UZ } }) },
+            { 7, make_props({ { "packet_len", 23UZ } }) }
         };
         std::vector<int> v(30);
         std::iota(v.begin(), v.end(), 0);

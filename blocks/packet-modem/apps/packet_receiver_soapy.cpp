@@ -36,8 +36,8 @@ int main(int argc, char** argv)
     gr::Graph fg;
     auto& soapy_source = fg.emplaceBlock<gr::blocks::soapy::SoapyBlock<c64, 1UZ>>(
         gr::packet_modem::make_props({
-            { "device", gr::packet_modem::pmt_value(std::string("rtlsdr")) },
-            { "sample_rate", gr::packet_modem::pmt_value(samp_rate) },
+            { "device", std::string("rtlsdr") },
+            { "sample_rate", samp_rate },
             { "rx_center_frequency",
               gr::pmt::Value(gr::Tensor<double>(std::vector<double>{ rf_freq })) },
             { "rx_gains", gr::pmt::Value(gr::Tensor<double>(std::vector<double>{ 30.0 })) },
