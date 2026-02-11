@@ -94,7 +94,7 @@ public:
                 }
                 gr::Message msg;
                 msg.data = gr::packet_modem::make_props({
-                    { "packet_length", gr::packet_modem::pmt_value(_remaining) },
+                    { "packet_length", _remaining },
                     { "packet_type",
                       gr::packet_modem::pmt_value(std::string(magic_enum::enum_name(packet_type))) },
                 });
@@ -193,7 +193,7 @@ public:
                 }
                 gr::Message msg;
                 msg.data = gr::packet_modem::make_props(
-                    { { "packet_length", gr::packet_modem::pmt_value(packet_length) },
+                    { { "packet_length", packet_length },
                       { "packet_type",
                         gr::packet_modem::pmt_value(std::string(magic_enum::enum_name(packet_type))) } });
                 metadataSpan[produced] = std::move(msg);

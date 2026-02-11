@@ -119,7 +119,7 @@ public:
                 }
                 gr::packet_modem::set_prop(tag.map,
                                            packet_len_tag_key,
-                                           gr::packet_modem::pmt_value(packet_len / inputs_per_output));
+                                           packet_len / inputs_per_output);
             }
             out.publishTag(tag.map, 0);
         }

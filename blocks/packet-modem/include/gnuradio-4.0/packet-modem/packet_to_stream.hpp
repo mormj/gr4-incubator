@@ -118,7 +118,7 @@ public:
             ++_packet_count;
             gr::Message msg;
             msg.data = gr::packet_modem::make_props({
-                { "packet_count", gr::packet_modem::pmt_value(_packet_count) },
+                { "packet_count", _packet_count },
             });
             countSpan[0] = std::move(msg);
             countSpan.publish(1);
@@ -223,7 +223,7 @@ public:
                 ++_packet_count;
                 gr::Message msg;
                 msg.data = gr::packet_modem::make_props(
-                    { { "packet_count", gr::packet_modem::pmt_value(_packet_count) } });
+                    { { "packet_count", _packet_count } });
                 *count_item++ = std::move(msg);
             }
             out_item += static_cast<ssize_t>(to_publish);

@@ -59,6 +59,9 @@ public:
         _vector.insert(_vector.end(), inSpan.begin(), inSpan.end());
 #endif
 
+        if (!inSpan.consume(inSpan.size())) {
+            throw gr::exception("consume failed");
+        }
         return gr::work::Status::OK;
     }
 

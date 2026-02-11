@@ -19,9 +19,9 @@ int main()
     std::vector<int> v(30);
     std::iota(v.begin(), v.end(), 0);
     const std::vector<gr::Tag> tags = {
-        { 0, gr::packet_modem::make_props({ { "packet_len", gr::packet_modem::pmt_value(10U) } }) },
-        { 3, gr::packet_modem::make_props({ { "foo", gr::packet_modem::pmt_value("bar") } }) },
-        { 10, gr::packet_modem::make_props({ { "packet_len", gr::packet_modem::pmt_value(20U) } }) },
+        { 0, gr::packet_modem::make_props({ { "packet_len", 10U } }) },
+        { 3, gr::packet_modem::make_props({ { "foo", "bar" } }) },
+        { 10, gr::packet_modem::make_props({ { "packet_len", 20U } }) },
     };
     auto& source = fg.emplaceBlock<gr::packet_modem::VectorSource<int>>();
     source.data = v;

@@ -31,7 +31,7 @@ boost::ut::suite MultiplyPacketLenTagTests = [] {
         scheduler::Simple sched;
         gr::packet_modem::init_scheduler(sched, std::move(fg));
         expect(sched.runAndWait().has_value());
-        expect(eq(sink.data(), v));
+        expect(sink.data() == v);
         const std::vector<Tag> expected_tags = {
             { 0, make_props({ { "packet_len", pmt_value(35UZ) } }) },
             { 7, make_props({ { "packet_len", pmt_value(115UZ) } }) }

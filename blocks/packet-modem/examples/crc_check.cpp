@@ -18,32 +18,32 @@ int main()
 
     std::vector<uint8_t> data(10);
     const std::vector<gr::Tag> tags = {
-        { 0, gr::packet_modem::make_props({ { "packet_len", gr::packet_modem::pmt_value(8U) } }) },
+        { 0, gr::packet_modem::make_props({ { "packet_len", 8U } }) },
         //{ 1, { { "foo", "bar" } } },
-        { 8, gr::packet_modem::make_props({ { "packet_len", gr::packet_modem::pmt_value(2U) } }) },
+        { 8, gr::packet_modem::make_props({ { "packet_len", 2U } }) },
     };
     auto& source =
         fg.emplaceBlock<gr::packet_modem::VectorSource<uint8_t>>(
-            gr::packet_modem::make_props({ { "repeat", gr::packet_modem::pmt_value(false) } }));
+            gr::packet_modem::make_props({ { "repeat", false } }));
     source.data = data;
     source.tags = tags;
     auto& crc_append = fg.emplaceBlock<gr::packet_modem::CrcAppend<>>(
         gr::packet_modem::make_props({
-            { "num_bits", gr::packet_modem::pmt_value(16U) },
-            { "poly", gr::packet_modem::pmt_value(uint64_t{ 0x1021 }) },
-            { "initial_value", gr::packet_modem::pmt_value(uint64_t{ 0xFFFF }) },
-            { "final_xor", gr::packet_modem::pmt_value(uint64_t{ 0xFFFF }) },
-            { "input_reflected", gr::packet_modem::pmt_value(true) },
-            { "result_reflected", gr::packet_modem::pmt_value(true) },
+            { "num_bits", 16U },
+            { "poly", uint64_t{ 0x1021 } },
+            { "initial_value", uint64_t{ 0xFFFF } },
+            { "final_xor", uint64_t{ 0xFFFF } },
+            { "input_reflected", true },
+            { "result_reflected", true },
         }));
     auto& crc_check = fg.emplaceBlock<gr::packet_modem::CrcCheck<>>(
         gr::packet_modem::make_props({
-            { "num_bits", gr::packet_modem::pmt_value(16U) },
-            { "poly", gr::packet_modem::pmt_value(uint64_t{ 0x1021 }) },
-            { "initial_value", gr::packet_modem::pmt_value(uint64_t{ 0xFFFF }) },
-            { "final_xor", gr::packet_modem::pmt_value(uint64_t{ 0xFFFF }) },
-            { "input_reflected", gr::packet_modem::pmt_value(true) },
-            { "result_reflected", gr::packet_modem::pmt_value(true) },
+            { "num_bits", 16U },
+            { "poly", uint64_t{ 0x1021 } },
+            { "initial_value", uint64_t{ 0xFFFF } },
+            { "final_xor", uint64_t{ 0xFFFF } },
+            { "input_reflected", true },
+            { "result_reflected", true },
         }));
     auto& sink = fg.emplaceBlock<gr::packet_modem::VectorSink<uint8_t>>();
     expect(eq(gr::ConnectionResult::SUCCESS,
@@ -65,7 +65,7 @@ int main()
             "",
             gr::block::property::kLifeCycleState,
             gr::packet_modem::make_props(
-                { { "state", gr::packet_modem::pmt_value("REQUESTED_STOP") } }));
+                { { "state", "REQUESTED_STOP" } }));
     });
 
     const auto ret = sched.runAndWait();

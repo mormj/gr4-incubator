@@ -22,7 +22,7 @@ int main()
     };
     auto& vector_source =
         fg.emplaceBlock<gr::packet_modem::VectorSource<uint8_t>>(
-            gr::packet_modem::make_props({ { "repeat", gr::packet_modem::pmt_value(true) } }));
+            gr::packet_modem::make_props({ { "repeat", true } }));
     vector_source.data = v;
     vector_source.tags = tags;
     auto& crc_append = fg.emplaceBlock<gr::packet_modem::CrcAppend<>>();

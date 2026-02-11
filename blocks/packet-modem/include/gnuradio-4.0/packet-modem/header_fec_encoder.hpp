@@ -84,7 +84,7 @@ public:
                 const auto packet_len = gr::packet_modem::pmt_cast<uint64_t>(len_it->second);
                 gr::packet_modem::set_prop(tag.map,
                                            packet_len_tag_key,
-                                           gr::packet_modem::pmt_value(packet_len * 8U));
+                                           packet_len * 8U);
             }
 #ifdef TRACE
             std::println("{} publishTag(), map = {}", this->name, tag.map);

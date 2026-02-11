@@ -39,7 +39,7 @@ boost::ut::suite HeaderFecEncoderTests = [] {
             0x6b, 0x11, 0x2d, 0x72,                                                 //
             0x1b, 0x59, 0xe3, 0x4f, 0xe7, 0x71, 0x91, 0x5f, 0xe1, 0x37, 0x6e, 0x2b
         };
-        expect(eq(sink.data(), expected_output));
+        expect(sink.data() == expected_output);
         const std::vector<Tag> expected_tags = { { 0, { { "packet_len", 32UZ } } },
                                                  { 32, { { "packet_len", 32UZ } } } };
         expect(sink.tags() == expected_tags);
@@ -92,7 +92,7 @@ boost::ut::suite HeaderFecEncoderTests = [] {
             0x6b, 0x11, 0x2d, 0x72,                                                 //
             0x1b, 0x59, 0xe3, 0x4f, 0xe7, 0x71, 0x91, 0x5f, 0xe1, 0x37, 0x6e, 0x2b
         };
-        expect(eq(sink.data(), expected_output));
+        expect(sink.data() == expected_output);
         const std::vector<Tag> expected_tags = { { 0, { { "packet_len", 32UZ } } },
                                                  { 32, { { "packet_len", 32UZ } } } };
         expect(sink.tags() == expected_tags);

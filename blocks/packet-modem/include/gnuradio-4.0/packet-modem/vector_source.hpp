@@ -12,7 +12,7 @@
 namespace gr::packet_modem {
 
 template <typename T>
-class VectorSource : public gr::Block<VectorSource<T>>
+struct VectorSource : public gr::Block<VectorSource<T>>
 {
 public:
     using Description = Doc<R""(
@@ -29,10 +29,9 @@ the same relative positions of the data.
 
 )"">;
 
-public:
-    ssize_t _position;
 
-private:
+    size_t _position = 0;
+
     void check_vector()
     {
         if (data.empty()) {
@@ -46,7 +45,7 @@ private:
         }
     }
 
-public:
+
     gr::PortOut<T> out;
     std::vector<T> data;
     bool repeat = false;
@@ -70,63 +69,81 @@ public:
 #ifdef TRACE
         std::println("{}::processBulk(outSpan.size() = {})", this->name, outSpan.size());
 #endif
-        // copy what remains of the current "loop" of the vector
-        const auto n = std::min(std::ssize(data) - _position, std::ssize(outSpan));
-        auto output = outSpan.begin();
-        std::ranges::copy(data | std::views::drop(_position) | std::views::take(n),
-                          output);
-        for (const auto& tag : tags) {
-            if (tag.index >= _position && tag.index - _position < n) {
-                out.publishTag(tag.map, tag.index - _position);
-            }
-        }
-        output += n;
-        _position += n;
+//         if (outSpan.size() == 0) {
+//             outSpan.publish(0);
+//             return gr::work::Status::INSUFFICIENT_OUTPUT_ITEMS;
+//         }
 
-        // exit here if we don't repeat
-        if (!repeat) {
-            outSpan.publish(static_cast<size_t>(n));
-#ifdef TRACE
-            if (_position == std::ssize(data)) {
-                std::println("{}::processBulk returning DONE", this->name);
-            } else {
-                std::println("{}::processBulk returning OK", this->name);
-            }
-#endif
-            return _position == std::ssize(data) ? gr::work::Status::DONE
-                                                 : gr::work::Status::OK;
-        }
+//         const size_t data_size = data.size();
+//         size_t published = 0;
 
-        if (_position != std::ssize(data)) {
-            // there is no more output
-            outSpan.publish(static_cast<size_t>(n));
-#ifdef TRACE
-            std::println("{}::processBulk returning OK", this->name);
-#endif
-            return gr::work::Status::OK;
-        }
+//         auto emit_tags = [&](size_t offset_in_data, size_t count, size_t out_base) {
+//             if (count == 0) {
+//                 return;
+//             }
+//             for (const auto& tag : tags) {
+//                 if (tag.index < 0) {
+//                     continue;
+//                 }
+//                 const auto tag_index = static_cast<size_t>(tag.index);
+//                 if (tag_index >= offset_in_data &&
+//                     tag_index < offset_in_data + count) {
+//                     out.publishTag(tag.map,
+//                                    static_cast<ssize_t>(
+//                                        out_base + (tag_index - offset_in_data)));
+//                 }
+//             }
+//         };
 
-        // fill the rest of the output with full loops of the vector
-        while (outSpan.end() - output >= std::ssize(data)) {
-            std::ranges::copy(data, output);
-            for (const auto& tag : tags) {
-                out.publishTag(tag.map, output - outSpan.begin() + tag.index);
-            }
-            output += std::ssize(data);
-        }
-        // fill the end of the output with a partial loop
-        _position = outSpan.end() - output;
-        std::ranges::copy(data | std::views::take(_position), output);
-        for (const auto& tag : tags) {
-            if (tag.index < _position) {
-                out.publishTag(tag.map, output - outSpan.begin() + tag.index);
-            }
-        }
-        output += _position;
+//         auto write_segment = [&](size_t offset_in_data, size_t count) {
+//             std::copy_n(data.begin() + static_cast<ssize_t>(offset_in_data),
+//                         static_cast<ssize_t>(count),
+//                         outSpan.begin() + static_cast<ssize_t>(published));
+//             emit_tags(offset_in_data, count, published);
+//             published += count;
+//         };
 
-#ifdef TRACE
-        std::println("{}::processBulk returning OK", this->name);
-#endif
+//         // First fill remaining items from the current position.
+//         if (_position < data_size) {
+//             const size_t n =
+//                 std::min(data_size - _position, outSpan.size() - published);
+//             write_segment(_position, n);
+//             _position += n;
+//         }
+
+//         if (!repeat) {
+//             outSpan.publish(published);
+// #ifdef TRACE
+//             if (_position == data_size) {
+//                 std::println("{}::processBulk returning DONE", this->name);
+//             } else {
+//                 std::println("{}::processBulk returning OK", this->name);
+//             }
+// #endif
+//             return _position == data_size ? gr::work::Status::DONE
+//                                           : gr::work::Status::OK;
+//         }
+
+//         if (_position == data_size) {
+//             _position = 0;
+//         }
+
+//         // Fill the rest of the output with full loops, then a partial loop.
+//         while (published < outSpan.size()) {
+//             const size_t n = std::min(data_size, outSpan.size() - published);
+//             write_segment(0, n);
+//             if (n < data_size) {
+//                 _position = n;
+//                 break;
+//             }
+//             _position = 0;
+//         }
+
+//         outSpan.publish(published);
+// #ifdef TRACE
+//         std::println("{}::processBulk returning OK", this->name);
+// #endif
+        outSpan.publish(outSpan.size());
         return gr::work::Status::OK;
     }
     GR_MAKE_REFLECTABLE(VectorSource, out, /*data, */ repeat);

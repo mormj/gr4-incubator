@@ -31,7 +31,7 @@ boost::ut::suite MapperTests = [] {
         const std::vector<float> expected = { 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.6f,
                                               0.7f, 0.8f, 0.1f, 0.2f, 0.3f, 0.4f,
                                               0.5f, 0.6f, 0.7f, 0.8f };
-        expect(eq(sink.data(), expected));
+        expect(sink.data() == expected);
     };
 
     "mapper_fixed_input_pdu"_test = [] {
@@ -57,7 +57,7 @@ boost::ut::suite MapperTests = [] {
                                               0.7f, 0.8f, 0.1f, 0.2f, 0.3f, 0.4f,
                                               0.5f, 0.6f, 0.7f, 0.8f };
         const auto out = data.at(0);
-        expect(eq(out.data, expected));
+        expect(out.data == expected);
         expect(eq(out.tags.size(), 0_u));
     };
 };

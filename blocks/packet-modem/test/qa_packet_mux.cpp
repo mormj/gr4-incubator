@@ -59,10 +59,10 @@ boost::ut::suite PacketMuxTests = [] {
         expect(eq(sink_data.size(), length0 + length1));
         const auto first = sink_data | std::views::take(length0);
         const std::vector<int> first_v(first.begin(), first.end());
-        expect(eq(first_v, v0));
+        expect(first_v == v0);
         const auto second = sink_data | std::views::drop(length0);
         const std::vector<int> second_v(second.begin(), second.end());
-        expect(eq(second_v, v1));
+        expect(second_v == v1);
         std::vector<gr::Tag> all_tags = {
             { 0, make_props({ { "packet_len", pmt_value(length0 + length1) },
                               { "foo", pmt_value("bar") } }) },
@@ -112,7 +112,7 @@ boost::ut::suite PacketMuxTests = [] {
             { 12, make_props({ { "h", pmt_value("i") } }) },
             { 14, make_props({ { "j", pmt_value("k") } }) }
         };
-        expect(eq(out_pdu.data, expected_items));
+        expect(out_pdu.data == expected_items);
         expect(out_pdu.tags == expected_tags);
     };
 };

@@ -81,7 +81,7 @@ public:
                 }
                 if (!packet_len_tag_key.empty()) {
                     const gr::property_map map = gr::packet_modem::make_props(
-                        { { packet_len_tag_key, gr::packet_modem::pmt_value(packet_len) } });
+                        { { packet_len_tag_key, packet_len } });
                     const auto index = out_item - outSpan.begin();
 #ifdef TRACE
                     std::println("{} publishTag({}, {})", this->name, map, index);
@@ -92,7 +92,7 @@ public:
                     ++_packet_count;
                     gr::Message msg;
                     msg.data = gr::packet_modem::make_props(
-                        { { "packet_count", gr::packet_modem::pmt_value(_packet_count) } });
+                        { { "packet_count", _packet_count } });
                     *count_item++ = std::move(msg);
                 }
             }

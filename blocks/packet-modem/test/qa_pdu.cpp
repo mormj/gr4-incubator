@@ -45,7 +45,7 @@ boost::ut::suite PduTests = [] {
         stopper.join();
         const std::vector<int> expected_data = { 1,  2,  3,  4,  5,  10, 11, 12,
                                                  13, 14, 15, 16, 17, 18, 19, 20 };
-        expect(eq(sink.data(), expected_data));
+        expect(sink.data() == expected_data);
         const std::vector<Tag> expected_tags = {
             { 0, { { "foo", "bar" }, { "baz", 7 }, { "packet_len", 5UZ } } },
             { 5, { { "packet_len", 11UZ } } },
@@ -78,8 +78,8 @@ boost::ut::suite PduTests = [] {
         expect(eq(pdus.size(), 2_u));
         const std::vector<int> expected_0(v.cbegin(), v.cbegin() + 10);
         const std::vector<int> expected_1(v.cbegin() + 10, v.cend());
-        expect(eq(pdus[0].data, expected_0));
-        expect(eq(pdus[1].data, expected_1));
+        expect(pdus[0].data == expected_0);
+        expect(pdus[1].data == expected_1);
         const std::vector<Tag> tags_0 = { { 3, { { "foo", "bar" } } } };
         expect(pdus[0].tags == tags_0);
         expect(pdus[1].tags.empty());
@@ -109,7 +109,7 @@ boost::ut::suite PduTests = [] {
             const std::vector<int> expected(v.cbegin() + static_cast<ssize_t>(10 * j),
                                             v.cbegin() +
                                                 static_cast<ssize_t>(10 * (j + 1)));
-            expect(eq(pdu.data, expected));
+            expect(pdu.data == expected);
             expect(pdu.tags.empty());
         }
     };

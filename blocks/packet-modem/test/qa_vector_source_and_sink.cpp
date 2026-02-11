@@ -33,7 +33,7 @@ boost::ut::suite VectorSourceAndSinkTests = [] {
         scheduler::Simple sched;
         gr::packet_modem::init_scheduler(sched, std::move(fg));
         expect(sched.runAndWait().has_value());
-        expect(eq(sink.data(), v));
+        expect(sink.data() == v);
         // do not use eq(), because tags cannot be formatted
         expect(sink.tags() == tags);
     };
@@ -50,7 +50,7 @@ boost::ut::suite VectorSourceAndSinkTests = [] {
         scheduler::Simple sched;
         gr::packet_modem::init_scheduler(sched, std::move(fg));
         expect(sched.runAndWait().has_value());
-        expect(eq(sink.data(), v));
+        expect(sink.data() == v);
     };
 
     "vector_source_repeat"_test = [] {
@@ -82,7 +82,7 @@ boost::ut::suite VectorSourceAndSinkTests = [] {
                            std::views::drop(j * static_cast<size_t>(num_items)) |
                            std::views::take(static_cast<size_t>(num_items));
             const std::vector<int> rep(r.begin(), r.end());
-            expect(eq(rep, v));
+            expect(rep == v);
         }
         const auto sink_tags = sink.tags();
         expect(eq(sink_tags.size(), tags.size() * repetitions));

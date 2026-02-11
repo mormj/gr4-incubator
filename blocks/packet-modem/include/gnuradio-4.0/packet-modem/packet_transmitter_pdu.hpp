@@ -92,7 +92,7 @@ public:
 
         auto& header_payload_mux =
             fg.emplaceBlock<PacketMux<Pdu<uint8_t>>>(
-                gr::packet_modem::make_props({ { "num_inputs", gr::packet_modem::pmt_value(2UZ) } }));
+                make_props({ { "num_inputs", 2UZ } }));
         header_payload_mux.name = "PacketTransmitter(header_payload_mux)";
         if (max_in_samples) {
             header_payload_mux.in.at(0).max_samples = max_in_samples;
@@ -107,7 +107,7 @@ public:
 
         auto& scrambler_unpack =
             fg.emplaceBlock<UnpackBits<Endianness::MSB, Pdu<uint8_t>, Pdu<uint8_t>>>(
-                gr::packet_modem::make_props({ { "outputs_per_input", gr::packet_modem::pmt_value(8UZ) } }));
+                make_props({ { "outputs_per_input", 8UZ } }));
         if (max_in_samples) {
             scrambler_unpack.in.max_samples = max_in_samples;
         }
@@ -119,9 +119,9 @@ public:
         }
         // 17-bit CCSDS scrambler defined in CCSDS 131.0-B-5 (September 2023)
         auto& scrambler = fg.emplaceBlock<AdditiveScrambler<Pdu<uint8_t>>>(
-            gr::packet_modem::make_props({ { "mask", gr::packet_modem::pmt_value(uint64_t{ 0x4001U }) },
-                                           { "seed", gr::packet_modem::pmt_value(uint64_t{ 0x18E38U }) },
-                                           { "length", gr::packet_modem::pmt_value(uint64_t{ 16U }) } }));
+            make_props({ { "mask", uint64_t{ 0x4001U } },
+                                           { "seed", uint64_t{ 0x18E38U } },
+                                           { "length", uint64_t{ 16U } } }));
         if (max_in_samples) {
             scrambler.in.max_samples = max_in_samples;
         }
@@ -136,8 +136,8 @@ public:
         };
         auto& qpsk_pack =
             fg.emplaceBlock<PackBits<Endianness::MSB, Pdu<uint8_t>, Pdu<uint8_t>>>(
-                gr::packet_modem::make_props({ { "inputs_per_output", gr::packet_modem::pmt_value(2UZ) },
-                                               { "bits_per_input", gr::packet_modem::pmt_value(uint8_t{ 1 }) } }));
+                make_props({ { "inputs_per_output", 2UZ },
+                                               { "bits_per_input", uint8_t{ 1 } } }));
         if (max_in_samples) {
             qpsk_pack.in.max_samples = max_in_samples;
         }
@@ -147,7 +147,7 @@ public:
             }
         }
         auto& qpsk_modulator = fg.emplaceBlock<Mapper<Pdu<uint8_t>, Pdu<c64>>>(
-            gr::packet_modem::make_props({ { "map", gr::packet_modem::pmt_value(qpsk_constellation) } }));
+            make_props({ { "map", gr::Tensor<c64>(gr::data_from, qpsk_constellation)  } }));
         if (max_in_samples) {
             qpsk_modulator.in.max_samples = max_in_samples;
         }
@@ -177,12 +177,12 @@ public:
         };
         auto& syncword_source =
             fg.emplaceBlock<VectorSource<Pdu<uint8_t>>>(
-                gr::packet_modem::make_props({ { "repeat", gr::packet_modem::pmt_value(true) } }));
+                make_props({ { "repeat", true } }));
         syncword_source.data = std::vector<Pdu<uint8_t>>{ syncword_pdu };
         syncword_source.name = "PacketTransmitter(syncword_source)";
         const std::vector<c64> bpsk_constellation = { { 1.0f, 0.0f }, { -1.0f, 0.0f } };
         auto& syncword_bpsk_modulator = fg.emplaceBlock<Mapper<Pdu<uint8_t>, Pdu<c64>>>(
-            gr::packet_modem::make_props({ { "map", gr::packet_modem::pmt_value(bpsk_constellation) } }));
+            make_props({ { "map", gr::Tensor<c64>(gr::data_from, bpsk_constellation) } }));
         if (max_in_samples) {
             syncword_bpsk_modulator.in.max_samples = max_in_samples;
         }
@@ -194,7 +194,7 @@ public:
         }
 
         auto& symbols_mux = fg.emplaceBlock<PacketMux<Pdu<c64>>>(
-            gr::packet_modem::make_props({ { "num_inputs", gr::packet_modem::pmt_value(stream_mode ? 2UZ : 4UZ) } }));
+            make_props({ { "num_inputs", stream_mode ? 2UZ : 4UZ } }));
         symbols_mux.name = "PacketTransmitter(symbols_mux)";
         if (max_in_samples) {
             for (auto& in_port : symbols_mux.in) {
@@ -214,13 +214,13 @@ public:
         if (!stream_mode) {
             // ramp-down sequence
             auto& ramp_down_source = fg.emplaceBlock<GlfsrSource<>>(
-                gr::packet_modem::make_props({ { "degree", gr::packet_modem::pmt_value(32) } }));
+                make_props({ { "degree", 32 } }));
             // 9 symbols used for ramp down. 5 to clear the RRC filter and 4 to
             // actually perform the amplitude ramp-down
             const size_t ramp_down_nsymbols = 9;
             const size_t ramp_down_nbits = 2U * ramp_down_nsymbols;
             auto& ramp_down_to_pdu = fg.emplaceBlock<StreamToPdu<uint8_t>>(
-                gr::packet_modem::make_props({ { "packet_length", gr::packet_modem::pmt_value(ramp_down_nbits) } }));
+                make_props({ { "packet_length", ramp_down_nbits } }));
             if (out_buff_size) {
                 if (ramp_down_to_pdu.out.resizeBuffer(out_buff_size) !=
                     ConnectionResult::SUCCESS) {
@@ -229,8 +229,8 @@ public:
             }
             auto& ramp_down_pack =
                 fg.emplaceBlock<PackBits<Endianness::MSB, Pdu<uint8_t>, Pdu<uint8_t>>>(
-                    gr::packet_modem::make_props({ { "inputs_per_output", gr::packet_modem::pmt_value(2UZ) },
-                                                   { "bits_per_input", gr::packet_modem::pmt_value(uint8_t{ 1 }) } }));
+                    make_props({ { "inputs_per_output", 2UZ },
+                                                   { "bits_per_input", uint8_t{ 1 } } }));
             if (max_in_samples) {
                 ramp_down_pack.in.max_samples = max_in_samples;
             }
@@ -241,7 +241,7 @@ public:
                 }
             }
             auto& ramp_down_modulator = fg.emplaceBlock<Mapper<Pdu<uint8_t>, Pdu<c64>>>(
-                gr::packet_modem::make_props({ { "map", gr::packet_modem::pmt_value(qpsk_constellation) } }));
+                make_props({ { "map", gr::Tensor<c64>(gr::data_from, qpsk_constellation) } }));
             if (max_in_samples) {
                 ramp_down_modulator.in.max_samples = max_in_samples;
             }
@@ -256,7 +256,7 @@ public:
             const Pdu<c64> flush_pdu = { flush_vector, {} };
             auto& rrc_flush_source =
                 fg.emplaceBlock<VectorSource<Pdu<c64>>>(
-                    gr::packet_modem::make_props({ { "repeat", gr::packet_modem::pmt_value(true) } }));
+                    make_props({ { "repeat", true } }));
             if (out_buff_size) {
                 if (rrc_flush_source.out.resizeBuffer(out_buff_size) !=
                     ConnectionResult::SUCCESS) {
@@ -293,8 +293,8 @@ public:
         if (!stream_mode) {
             auto& _rrc_interp =
                 fg.emplaceBlock<InterpolatingFirFilter<Pdu<c64>, Pdu<c64>, float>>(
-                    gr::packet_modem::make_props({ { "interpolation", gr::packet_modem::pmt_value(samples_per_symbol) },
-                                                   { "taps", gr::packet_modem::pmt_value(rrc_taps) } }));
+                    make_props({ { "interpolation", samples_per_symbol },
+                                                   { "taps", gr::Tensor<float>(gr::data_from, rrc_taps) } }));
             if (max_in_samples) {
                 _rrc_interp.in.max_samples = max_in_samples;
             }
@@ -323,8 +323,8 @@ public:
                     static_cast<double>(trailing_ramp.size()) * 0.5 * std::numbers::pi));
             }
             auto& _burst_shaper = fg.emplaceBlock<BurstShaper<Pdu<c64>, Pdu<c64>, float>>(
-                gr::packet_modem::make_props({ { "leading_shape", gr::packet_modem::pmt_value(leading_ramp) },
-                                               { "trailing_shape", gr::packet_modem::pmt_value(trailing_ramp) } }));
+                make_props({ { "leading_shape", gr::Tensor<float>(gr::data_from, leading_ramp) },
+                                               { "trailing_shape", gr::Tensor<float>(gr::data_from, trailing_ramp) } }));
             if (max_in_samples) {
                 _burst_shaper.in.max_samples = max_in_samples;
             }
@@ -349,8 +349,8 @@ public:
                 pdu_to_stream.in.max_samples = max_in_samples;
             }
             auto& _rrc_interp = fg.emplaceBlock<InterpolatingFirFilter<c64, c64, float>>(
-                gr::packet_modem::make_props({ { "interpolation", gr::packet_modem::pmt_value(samples_per_symbol) },
-                                               { "taps", gr::packet_modem::pmt_value(rrc_taps) } }));
+                make_props({ { "interpolation", samples_per_symbol },
+                                               { "taps", pmt_value(rrc_taps) } }));
             if (fg.connect<"out">(symbols_mux).to<"in">(pdu_to_stream) !=
                 ConnectionResult::SUCCESS) {
                 throw std::runtime_error(connection_error);

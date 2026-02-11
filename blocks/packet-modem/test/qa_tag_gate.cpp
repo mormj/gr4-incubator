@@ -2,6 +2,7 @@
 #include <gnuradio-4.0/packet-modem/pmt_helpers.hpp>
 #include <gnuradio-4.0/Scheduler.hpp>
 #include <gnuradio-4.0/packet-modem/scheduler_helpers.hpp>
+#include <gnuradio-4.0/packet-modem/pmt_helpers.hpp>
 #include <gnuradio-4.0/packet-modem/tag_gate.hpp>
 #include <gnuradio-4.0/packet-modem/vector_sink.hpp>
 #include <gnuradio-4.0/packet-modem/vector_source.hpp>
@@ -20,7 +21,7 @@ boost::ut::suite VectorSourceAndSinkTests = [] {
         const std::vector<Tag> tags = {
             { 0, { { "a", gr::packet_modem::pmt_null() } } },
             { 10, { { "b", 0.1234 }, { "c", 12345U } } },
-            { 73, { { "d", std::vector<int>{ 1, 2, 3 } }, { "e", 0.0f } } },
+            { 73, { { "d", pmt_value(std::vector<int>{ 1, 2, 3 }) }, { "e", 0.0f } } },
             { std::ssize(v) - 1, { { "f", gr::packet_modem::pmt_null() } } }
         };
         auto& source = fg.emplaceBlock<VectorSource<int>>();
@@ -34,7 +35,7 @@ boost::ut::suite VectorSourceAndSinkTests = [] {
         scheduler::Simple sched;
         gr::packet_modem::init_scheduler(sched, std::move(fg));
         expect(sched.runAndWait().has_value());
-        expect(eq(sink.data(), v));
+        expect(sink.data() == v);
         expect(sink.tags().empty());
     };
 };

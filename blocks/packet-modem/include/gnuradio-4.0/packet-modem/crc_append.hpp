@@ -139,7 +139,7 @@ public:
             _crc->initialize();
             // modify packet_len tag
             gr::packet_modem::set_prop(tag.map, packet_len_tag_key,
-                                       gr::packet_modem::pmt_value(_data_remaining + _crc_num_bytes));
+                                       _data_remaining + _crc_num_bytes);
             out.publishTag(tag.map, 0);
         } else if (_data_remaining > 0 && this->inputTagsPresent()) {
             // Propagate other data tags

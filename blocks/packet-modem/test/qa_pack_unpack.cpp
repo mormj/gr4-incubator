@@ -48,8 +48,8 @@ boost::ut::suite PackUnpackTests = [] {
         const std::vector<uint8_t> expected_lsb = { 0b01101000, 0b00111010, 0b10100011,
                                                     0b11111111, 0b0000000,  0b01010101,
                                                     0b10101010 };
-        expect(eq(sink_msb.data(), expected_msb));
-        expect(eq(sink_lsb.data(), expected_lsb));
+        expect(sink_msb.data() == expected_msb);
+        expect(sink_lsb.data() == expected_lsb);
     };
 
     "pack_8bits_fixed_pdu"_test = [] {
@@ -93,8 +93,8 @@ boost::ut::suite PackUnpackTests = [] {
                                                     0b10101010 };
         expect(eq(sink_msb.data().size(), 1_u));
         expect(eq(sink_lsb.data().size(), 1_u));
-        expect(eq(sink_msb.data().at(0).data, expected_msb));
-        expect(eq(sink_lsb.data().at(0).data, expected_lsb));
+        expect(sink_msb.data().at(0).data == expected_msb);
+        expect(sink_lsb.data().at(0).data == expected_lsb);
     };
 
     "unpack_8bits_fixed"_test = [] {
@@ -135,8 +135,8 @@ boost::ut::suite PackUnpackTests = [] {
             0, 0, 1, 0, 1, 1, 0, 0, //
             1, 0, 1, 0, 1, 0, 1, 0, //
         };
-        expect(eq(sink_msb.data(), expected_msb));
-        expect(eq(sink_lsb.data(), expected_lsb));
+        expect(sink_msb.data() == expected_msb);
+        expect(sink_lsb.data() == expected_lsb);
     };
 
     "unpack_8bits_fixed_pdu"_test = [] {
@@ -182,8 +182,8 @@ boost::ut::suite PackUnpackTests = [] {
         };
         expect(eq(sink_msb.data().size(), 1_u));
         expect(eq(sink_lsb.data().size(), 1_u));
-        expect(eq(sink_msb.data().at(0).data, expected_msb));
-        expect(eq(sink_lsb.data().at(0).data, expected_lsb));
+        expect(sink_msb.data().at(0).data == expected_msb);
+        expect(sink_lsb.data().at(0).data == expected_lsb);
     };
 
     "pack_unpack_random_data"_test = [](auto args) {
@@ -236,8 +236,8 @@ boost::ut::suite PackUnpackTests = [] {
             expected.push_back(static_cast<uint8_t>(in & ((1U << bits_per_nibble) - 1)));
         }
         expect(eq(input_data.size(), num_items));
-        expect(eq(sink_msb.data(), expected));
-        expect(eq(sink_lsb.data(), expected));
+        expect(sink_msb.data() == expected);
+        expect(sink_lsb.data() == expected);
     } | std::vector<std::tuple<size_t, uint8_t>>{ { 8U, 1U }, { 4U, 1U }, { 4U, 2U },
                                                   { 3U, 1U }, { 3U, 2U }, { 2U, 1U },
                                                   { 2U, 4U }, { 1U, 1U }, { 1U, 2U },

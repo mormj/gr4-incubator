@@ -55,7 +55,7 @@ public:
         const size_t ret = fread(outSpan.data(), sizeof(T), n, _file);
         if (ret != n) {
             if (feof(_file)) {
-                outSpan.publish(n);
+                outSpan.publish(ret);
                 return gr::work::Status::DONE;
             }
 
@@ -71,6 +71,7 @@ public:
             this->requestStop();
             return gr::work::Status::ERROR;
         }
+        outSpan.publish(n);
         return gr::work::Status::OK;
     }
     GR_MAKE_REFLECTABLE(FileSource, out, filename);

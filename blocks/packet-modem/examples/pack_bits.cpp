@@ -21,27 +21,27 @@ int main()
         { 0,
           gr::packet_modem::make_props({
               { "zero", gr::packet_modem::pmt_null() },
-              { "packet_len", gr::packet_modem::pmt_value(8U) },
+              { "packet_len", 8U },
           }) },
         { 1, gr::packet_modem::make_props({ { "one", gr::packet_modem::pmt_null() } }) },
         { 2, gr::packet_modem::make_props({ { "two", gr::packet_modem::pmt_null() } }) },
-        { 8, gr::packet_modem::make_props({ { "packet_len", gr::packet_modem::pmt_value(4U) } }) },
+        { 8, gr::packet_modem::make_props({ { "packet_len", 4U } }) },
     };
     auto& source = fg.emplaceBlock<gr::packet_modem::VectorSource<uint8_t>>();
     source.data = v;
     source.tags = tags;
     auto& pack = fg.emplaceBlock<gr::packet_modem::PackBits<>>(
         gr::packet_modem::make_props({
-            { "inputs_per_output", gr::packet_modem::pmt_value(2UZ) },
-            { "bits_per_input", gr::packet_modem::pmt_value(uint8_t{ 1 }) },
-            { "packet_len_tag_key", gr::packet_modem::pmt_value("packet_len") },
+            { "inputs_per_output", 2UZ },
+            { "bits_per_input", uint8_t{ 1 } },
+            { "packet_len_tag_key", "packet_len" },
         }));
     auto& sink = fg.emplaceBlock<gr::packet_modem::VectorSink<uint8_t>>();
     auto& unpack = fg.emplaceBlock<gr::packet_modem::UnpackBits<>>(
         gr::packet_modem::make_props({
-            { "outputs_per_input", gr::packet_modem::pmt_value(2UZ) },
-            { "bits_per_output", gr::packet_modem::pmt_value(uint8_t{ 1 }) },
-            { "packet_len_tag_key", gr::packet_modem::pmt_value("packet_len") },
+            { "outputs_per_input", 2UZ },
+            { "bits_per_output", uint8_t{ 1 } },
+            { "packet_len_tag_key", "packet_len" },
         }));
     auto& sink_unpacked = fg.emplaceBlock<gr::packet_modem::VectorSink<uint8_t>>();
     expect(eq(gr::ConnectionResult::SUCCESS, fg.connect<"out">(source).to<"in">(pack)));

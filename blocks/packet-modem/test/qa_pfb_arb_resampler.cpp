@@ -1,6 +1,7 @@
 #include <gnuradio-4.0/Graph.hpp>
 #include <gnuradio-4.0/Scheduler.hpp>
 #include <gnuradio-4.0/packet-modem/scheduler_helpers.hpp>
+#include <gnuradio-4.0/packet-modem/pmt_helpers.hpp>
 #include <gnuradio-4.0/packet-modem/pfb_arb_resampler.hpp>
 #include <gnuradio-4.0/packet-modem/pfb_arb_taps.hpp>
 #include <gnuradio-4.0/packet-modem/vector_sink.hpp>
@@ -34,7 +35,7 @@ boost::ut::suite PfbArbResamplerTests = [] {
         const double resampling_rate = 1.1234;
         auto& resampler =
             fg.emplaceBlock<gr::packet_modem::PfbArbResampler<c64, c64, float, double>>(
-                { { "taps", pfb_arb_taps }, { "rate", resampling_rate } });
+                { { "taps", gr::packet_modem::pmt_value(pfb_arb_taps) }, { "rate", resampling_rate } });
         auto& sink = fg.emplaceBlock<VectorSink<c64>>();
         expect(
             eq(ConnectionResult::SUCCESS, fg.connect<"out">(source).to<"in">(resampler)));

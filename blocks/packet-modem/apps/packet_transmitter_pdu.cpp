@@ -31,7 +31,7 @@ int main(int argc, char* argv[])
     const gr::packet_modem::Pdu<uint8_t> pdu = { v, {} };
     auto& vector_source =
         fg.emplaceBlock<gr::packet_modem::VectorSource<gr::packet_modem::Pdu<uint8_t>>>(
-            gr::packet_modem::make_props({ { "repeat", gr::packet_modem::pmt_value(true) } }));
+            gr::packet_modem::make_props({ { "repeat", true } }));
     vector_source.data = std::vector<gr::packet_modem::Pdu<uint8_t>>{ pdu };
     const size_t samples_per_symbol = 4U;
     const size_t max_in_samples = 1U;

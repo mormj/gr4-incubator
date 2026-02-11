@@ -15,10 +15,10 @@ int main()
     gr::Graph fg;
 
     const gr::property_map message =
-        gr::packet_modem::make_props({ { "test", gr::packet_modem::pmt_value(1) } });
+        gr::packet_modem::make_props({ { "test", 1 } });
     auto& strobe = fg.emplaceBlock<gr::packet_modem::MessageStrobe<>>(
-        gr::packet_modem::make_props({ { "message", gr::packet_modem::pmt_value(message) },
-                                       { "interval_secs", gr::packet_modem::pmt_value(1.0) } }));
+        gr::packet_modem::make_props({ { "message", message },
+                                       { "interval_secs", 1.0 } }));
     auto& debug = fg.emplaceBlock<gr::packet_modem::MessageDebug>();
     expect(eq(gr::ConnectionResult::SUCCESS,
               fg.connect<"strobe">(strobe).to<"print">(debug)));
@@ -37,7 +37,7 @@ int main()
             toScheduler,
             "",
             gr::block::property::kLifeCycleState,
-            gr::packet_modem::make_props({ { "state", gr::packet_modem::pmt_value("REQUESTED_STOP") } }));
+            gr::packet_modem::make_props({ { "state", "REQUESTED_STOP" } }));
     });
 
     std::println("running for 10 seconds...");

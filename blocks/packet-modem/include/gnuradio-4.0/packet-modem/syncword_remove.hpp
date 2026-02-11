@@ -3,6 +3,7 @@
 
 #include <gnuradio-4.0/Block.hpp>
 #include <gnuradio-4.0/meta/reflection.hpp>
+#include <gnuradio-4.0/packet-modem/pmt_helpers.hpp>
 #include <complex>
 
 #include <print>

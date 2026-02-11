@@ -40,7 +40,7 @@ boost::ut::suite SyncwordRemoveTests = [] {
         expected.erase(expected.begin() + 250, expected.begin() + 250 + syncword_size);
         expected.erase(expected.begin() + 100, expected.begin() + 100 + syncword_size);
         expected.erase(expected.begin() + 10, expected.begin() + 10 + syncword_size);
-        expect(eq(data, expected));
+        expect(data == expected);
     };
 };
 

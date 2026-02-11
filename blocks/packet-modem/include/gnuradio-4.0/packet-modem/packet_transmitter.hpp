@@ -43,46 +43,46 @@ public:
         using namespace std::string_literals;
 
         auto& _ingress = fg.emplaceBlock<PacketIngress<>>(
-            gr::packet_modem::make_props({ { "packet_len_tag_key", gr::packet_modem::pmt_value(packet_len_tag_key) } }));
+            make_props({ { "packet_len_tag_key", packet_len_tag_key } }));
         ingress = &_ingress;
 
         // header
         auto& header_formatter = fg.emplaceBlock<HeaderFormatter<>>(
-            gr::packet_modem::make_props({ { "packet_len_tag_key", gr::packet_modem::pmt_value(packet_len_tag_key) } }));
+            make_props({ { "packet_len_tag_key", packet_len_tag_key } }));
         auto& header_fec = fg.emplaceBlock<HeaderFecEncoder<>>(
-            gr::packet_modem::make_props({ { "packet_len_tag_key", gr::packet_modem::pmt_value(packet_len_tag_key) } }));
+            make_props({ { "packet_len_tag_key", packet_len_tag_key } }));
 
         // payload
         auto& crc_append = fg.emplaceBlock<CrcAppend<>>(
-            gr::packet_modem::make_props({ { "packet_len_tag_key", gr::packet_modem::pmt_value(packet_len_tag_key) } }));
+            make_props({ { "packet_len_tag_key", packet_len_tag_key } }));
         // a payload FEC encoder block would be instantiated here
 
         auto& header_payload_mux =
             fg.emplaceBlock<PacketMux<uint8_t>>(
-                gr::packet_modem::make_props({ { "num_inputs", gr::packet_modem::pmt_value(2UZ) } }));
+                make_props({ { "num_inputs", 2UZ } }));
         header_payload_mux.name = "PacketTransmitter(header_payload_mux)";
 
         auto& scrambler_unpack = fg.emplaceBlock<UnpackBits<>>(
-            gr::packet_modem::make_props({ { "outputs_per_input", gr::packet_modem::pmt_value(8UZ) },
-                                           { "packet_len_tag_key", gr::packet_modem::pmt_value(packet_len_tag_key) } }));
+            make_props({ { "outputs_per_input", 8UZ },
+                                           { "packet_len_tag_key", packet_len_tag_key } }));
         // 17-bit CCSDS scrambler defined in CCSDS 131.0-B-5 (September 2023)
         auto& scrambler = fg.emplaceBlock<AdditiveScrambler<uint8_t>>(
-            gr::packet_modem::make_props({ { "mask", gr::packet_modem::pmt_value(uint64_t{ 0x4001U }) },
-                                           { "seed", gr::packet_modem::pmt_value(uint64_t{ 0x18E38U }) },
-                                           { "length", gr::packet_modem::pmt_value(uint64_t{ 16U }) },
-                                           { "reset_tag_key", gr::packet_modem::pmt_value(packet_len_tag_key) } }));
+            make_props({ { "mask", uint64_t{ 0x4001U } },
+                                           { "seed", uint64_t{ 0x18E38U } },
+                                           { "length", uint64_t{ 16U } },
+                                           { "reset_tag_key", packet_len_tag_key } }));
         const float a = std::sqrt(2.0f) / 2.0f;
         const std::vector<c64> qpsk_constellation = {
             { a, a }, { a, -a }, { -a, a }, { -a, -a }
         };
         auto& qpsk_pack =
             fg.emplaceBlock<PackBits<>>(
-                gr::packet_modem::make_props({ { "inputs_per_output", gr::packet_modem::pmt_value(2UZ) },
-                                               { "bits_per_input", gr::packet_modem::pmt_value(uint8_t{ 1 }) },
-                                               { "packet_len_tag_key", gr::packet_modem::pmt_value(packet_len_tag_key) } }));
+                make_props({ { "inputs_per_output", 2UZ },
+                                               { "bits_per_input", uint8_t{ 1 } },
+                                               { "packet_len_tag_key", packet_len_tag_key } }));
         auto& qpsk_modulator =
             fg.emplaceBlock<Mapper<uint8_t, c64>>(
-                gr::packet_modem::make_props({ { "map", gr::packet_modem::pmt_value(qpsk_constellation) } }));
+                make_props({ { "map", pmt_value(qpsk_constellation) } }));
 
         // syncword (64-bit CCSDS syncword)
         const std::vector<uint8_t> syncword = {
@@ -101,22 +101,22 @@ public:
             uint8_t{ 0 }, uint8_t{ 0 }, uint8_t{ 0 }, uint8_t{ 0 }
         };
         const std::vector<Tag> syncword_tags = {
-            { 0, gr::packet_modem::make_props(
-                     { { packet_len_tag_key, gr::packet_modem::pmt_value(static_cast<uint64_t>(syncword.size())) } }) }
+            { 0, make_props(
+                     { { packet_len_tag_key, pmt_value(static_cast<uint64_t>(syncword.size())) } }) }
         };
         auto& syncword_source =
             fg.emplaceBlock<VectorSource<uint8_t>>(
-                gr::packet_modem::make_props({ { "repeat", gr::packet_modem::pmt_value(true) } }));
+                make_props({ { "repeat", true } }));
         syncword_source.data = syncword;
         syncword_source.tags = syncword_tags;
         syncword_source.name = "PacketTransmitter(syncword_source)";
         const std::vector<c64> bpsk_constellation = { { 1.0f, 0.0f }, { -1.0f, 0.0f } };
         auto& syncword_bpsk_modulator =
             fg.emplaceBlock<Mapper<uint8_t, c64>>(
-                gr::packet_modem::make_props({ { "map", gr::packet_modem::pmt_value(bpsk_constellation) } }));
+                make_props({ { "map", pmt_value(bpsk_constellation) } }));
 
         auto& symbols_mux = fg.emplaceBlock<PacketMux<c64>>(
-            gr::packet_modem::make_props({ { "num_inputs", gr::packet_modem::pmt_value(stream_mode ? 2UZ : 4UZ) } }));
+            make_props({ { "num_inputs", stream_mode ? 2UZ : 4UZ } }));
         symbols_mux.name = "PacketTransmitter(symbols_mux)";
 
         constexpr auto connection_error = "connection_error";
@@ -125,26 +125,26 @@ public:
         if (!stream_mode) {
             // ramp-down sequence
             auto& ramp_down_source = fg.emplaceBlock<GlfsrSource<>>(
-                gr::packet_modem::make_props({ { "degree", gr::packet_modem::pmt_value(32) } }));
+                make_props({ { "degree", 32 } }));
             // 9 symbols used for ramp down. 5 to clear the RRC filter and 4 to
             // actually perform the amplitude ramp-down
             const size_t ramp_down_nsymbols = 9;
             const size_t ramp_down_nbits = 2U * ramp_down_nsymbols;
             auto& ramp_down_tags = fg.emplaceBlock<StreamToTaggedStream<uint8_t>>(
-                gr::packet_modem::make_props(
-                    { { "packet_length", gr::packet_modem::pmt_value(static_cast<uint64_t>(ramp_down_nbits)) } }));
+                make_props(
+                    { { "packet_length", pmt_value(static_cast<uint64_t>(ramp_down_nbits)) } }));
             auto& ramp_down_pack = fg.emplaceBlock<PackBits<>>(
-                gr::packet_modem::make_props({ { "inputs_per_output", gr::packet_modem::pmt_value(2UZ) },
-                                               { "bits_per_input", gr::packet_modem::pmt_value(uint8_t{ 1 }) },
-                                               { "packet_len_tag_key", gr::packet_modem::pmt_value(packet_len_tag_key) } }));
+                make_props({ { "inputs_per_output", 2UZ },
+                                               { "bits_per_input", uint8_t{ 1 } },
+                                               { "packet_len_tag_key", packet_len_tag_key } }));
             auto& ramp_down_modulator =
                 fg.emplaceBlock<Mapper<uint8_t, c64>>(
-                    gr::packet_modem::make_props({ { "map", gr::packet_modem::pmt_value(qpsk_constellation) } }));
+                    make_props({ { "map", pmt_value(qpsk_constellation) } }));
 
             auto& rrc_flush_source = fg.emplaceBlock<NullSource<c64>>();
             auto& rrc_flush_tags = fg.emplaceBlock<StreamToTaggedStream<c64>>(
-                gr::packet_modem::make_props(
-                    { { "packet_length", gr::packet_modem::pmt_value(static_cast<uint64_t>(rrc_flush_nsymbols)) } }));
+                make_props(
+                    { { "packet_length", pmt_value(static_cast<uint64_t>(rrc_flush_nsymbols)) } }));
 
             if (fg.connect<"out">(ramp_down_source).to<"in">(ramp_down_tags) !=
                 ConnectionResult::SUCCESS) {
@@ -175,11 +175,11 @@ public:
 
         const auto rrc_taps = packet_transmitter_rrc_taps(samples_per_symbol);
         auto& rrc_interp = fg.emplaceBlock<InterpolatingFirFilter<c64, c64, float>>(
-            gr::packet_modem::make_props({ { "interpolation", gr::packet_modem::pmt_value(samples_per_symbol) },
-                                           { "taps", gr::packet_modem::pmt_value(rrc_taps) } }));
+            make_props({ { "interpolation", samples_per_symbol },
+                                           { "taps", pmt_value(rrc_taps) } }));
         auto& _rrc_interp_mult_tag = fg.emplaceBlock<MultiplyPacketLenTag<c64>>(
-            gr::packet_modem::make_props({ { "mult", gr::packet_modem::pmt_value(static_cast<double>(samples_per_symbol)) },
-                                           { "packet_len_tag_key", gr::packet_modem::pmt_value(packet_len_tag_key) } }));
+            make_props({ { "mult", pmt_value(static_cast<double>(samples_per_symbol)) },
+                                           { "packet_len_tag_key", packet_len_tag_key } }));
 
         if (!stream_mode) {
             // burst shaper
@@ -201,9 +201,9 @@ public:
                     static_cast<double>(trailing_ramp.size()) * 0.5 * std::numbers::pi));
             }
             auto& _burst_shaper = fg.emplaceBlock<BurstShaper<c64, c64, float>>(
-                gr::packet_modem::make_props({ { "leading_shape", gr::packet_modem::pmt_value(leading_ramp) },
-                                               { "trailing_shape", gr::packet_modem::pmt_value(trailing_ramp) },
-                                               { "packet_len_tag_key", gr::packet_modem::pmt_value(packet_len_tag_key) } }));
+                make_props({ { "leading_shape", pmt_value(leading_ramp) },
+                                               { "trailing_shape", pmt_value(trailing_ramp) },
+                                               { "packet_len_tag_key", packet_len_tag_key } }));
             if (fg.connect<"out">(_rrc_interp_mult_tag).to<"in">(_burst_shaper) !=
                 ConnectionResult::SUCCESS) {
                 throw std::runtime_error(connection_error);

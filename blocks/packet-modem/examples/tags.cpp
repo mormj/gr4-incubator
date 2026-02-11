@@ -21,13 +21,13 @@ int main()
         { 0, gr::packet_modem::make_props({ { "begin", gr::packet_modem::pmt_null() } }) },
         { 10,
           gr::packet_modem::make_props({
-              { "param_a", gr::packet_modem::pmt_value(3.1415) },
-              { "param_b", gr::packet_modem::pmt_value(12345U) },
+              { "param_a", 3.1415 },
+              { "param_b", 12345U },
           }) },
         { 73,
           gr::packet_modem::make_props({
               { "param_c", gr::packet_modem::pmt_value(std::vector<int>{ 1, 2, 3 }) },
-              { "param_d", gr::packet_modem::pmt_value(0.0f) },
+              { "param_d", 0.0f },
           }) },
         { std::ssize(v) - 1,
           gr::packet_modem::make_props({ { "end", gr::packet_modem::pmt_null() } }) }

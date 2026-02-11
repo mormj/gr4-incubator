@@ -125,7 +125,7 @@ boost::ut::suite LoopbackTests = [] {
                 }
             }
             expect(eq(data.size(), expected_data.size()));
-            expect(eq(data, expected_data));
+            expect(data == expected_data);
             const auto tags = sink.tags();
             expect(eq(tags.size(), packet_lengths.size() - 1));
             for (size_t j = 0; j < tags.size(); ++j) {

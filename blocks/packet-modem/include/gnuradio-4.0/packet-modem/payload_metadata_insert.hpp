@@ -130,7 +130,7 @@ public:
                     gr::packet_modem::set_prop(tag.map, constellation_key, _pilot_key);
                     gr::packet_modem::set_prop(tag.map,
                                                loop_bandwidth_key,
-                                               gr::packet_modem::pmt_value(syncword_costas_loop_bandwidth));
+                                               syncword_costas_loop_bandwidth);
                     out.publishTag(tag.map, 0);
                     if (log) {
                         std::println(
@@ -252,7 +252,7 @@ public:
                     const uint64_t payload_bits = _payload_symbols * 2;
                     meta[payload_symbols_key] =
                         gr::packet_modem::pmt_value(static_cast<uint64_t>(_payload_symbols));
-                    meta[payload_bits_key] = gr::packet_modem::pmt_value(payload_bits);
+                    meta[payload_bits_key] = payload_bits;
                     meta[loop_bandwidth_key] = payload_costas_loop_bandwidth;
                     out.publishTag(meta, out_item - outSpan.begin());
                     if (log) {

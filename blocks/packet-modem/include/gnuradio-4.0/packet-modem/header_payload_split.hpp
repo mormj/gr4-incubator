@@ -75,7 +75,7 @@ public:
                 if (const auto len_it = tag.map.find(packet_len_tag_key); len_it != tag.map.end()) {
                     tag.map.erase(len_it);
                 }
-                tag.map.emplace(packet_len_tag_key, gr::packet_modem::pmt_value(_payload_items));
+                tag.map.emplace(packet_len_tag_key, _payload_items);
             }
             if (_in_payload) {
                 payload.publishTag(tag.map, 0);

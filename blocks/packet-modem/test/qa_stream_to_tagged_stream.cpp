@@ -30,7 +30,7 @@ boost::ut::suite StreamToTaggedStreamTests = [] {
         scheduler::Simple sched;
         gr::packet_modem::init_scheduler(sched, std::move(fg));
         expect(sched.runAndWait().has_value());
-        expect(eq(sink.data(), v));
+        expect(sink.data() == v);
         const auto tags = sink.tags();
         expect(eq(tags.size(),
                   (static_cast<size_t>(num_items) + static_cast<size_t>(packet_len) - 1) /

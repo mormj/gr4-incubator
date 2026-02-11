@@ -16,7 +16,7 @@ boost::ut::suite PacketToStreamTests = [] {
 
     "packet_to_stream"_test = [] {
         Graph fg;
-        const double samp_rate = 10e3;
+        const float samp_rate = 10e3f;
         const size_t packet_len = 25;
         auto& source = fg.emplaceBlock<ItemStrobe<Pdu<int>>>(
             { { "interval_secs", 0.1 }, { "sleep", false } });
@@ -64,7 +64,7 @@ boost::ut::suite PacketToStreamTests = [] {
 
     "packet_to_stream_pdu"_test = [] {
         Graph fg;
-        const double samp_rate = 10e3;
+        const float samp_rate = 10e3f;
         const size_t packet_len = 25;
         auto& source = fg.emplaceBlock<ItemStrobe<Pdu<int>>>(
             { { "interval_secs", 0.1 }, { "sleep", false } });

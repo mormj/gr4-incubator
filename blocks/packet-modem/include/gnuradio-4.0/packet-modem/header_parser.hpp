@@ -83,8 +83,8 @@ public:
             gr::Message msg;
             if (valid) {
                 msg.data = gr::packet_modem::make_props(
-                    { { "packet_length", gr::packet_modem::pmt_value(packet_length) },
-                      { "constellation", gr::packet_modem::pmt_value("QPSK") },
+                    { { "packet_length", packet_length },
+                      { "constellation", "QPSK" },
                       { "packet_type",
                         gr::packet_modem::pmt_value(std::string(magic_enum::enum_name(packet_type))) } });
             } else {

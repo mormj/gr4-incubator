@@ -1,6 +1,7 @@
 #include <gnuradio-4.0/Graph.hpp>
 #include <gnuradio-4.0/Scheduler.hpp>
 #include <gnuradio-4.0/packet-modem/scheduler_helpers.hpp>
+#include <gnuradio-4.0/packet-modem/pmt_helpers.hpp>
 #include <gnuradio-4.0/packet-modem/firdes.hpp>
 #include <gnuradio-4.0/packet-modem/interpolating_fir_filter.hpp>
 #include <gnuradio-4.0/packet-modem/mapper.hpp>
@@ -24,13 +25,13 @@ boost::ut::suite SymbolFilterTests = [] {
                                                      { "num_items", num_symbols } });
         const std::vector<float> constellation = { 1.0f, -1.0f };
         auto& constellation_mapper =
-            fg.emplaceBlock<Mapper<uint8_t, float>>({ { "map", constellation } });
+            fg.emplaceBlock<Mapper<uint8_t, float>>({ { "map", pmt_value(constellation) } });
         const size_t samples_per_symbol = 4U;
         const size_t ntaps = samples_per_symbol * 11U;
         auto rrc_taps = firdes::root_raised_cosine(
             1.0, static_cast<double>(samples_per_symbol), 1.0, 0.35, ntaps);
         auto& rrc_interp = fg.emplaceBlock<InterpolatingFirFilter<float, float, float>>(
-            { { "interpolation", samples_per_symbol }, { "taps", rrc_taps } });
+            { { "interpolation", samples_per_symbol }, { "taps", pmt_value(rrc_taps) } });
         const size_t symbol_filter_pfb_arms = 32UZ;
         const auto rrc_taps_pfb = firdes::root_raised_cosine(
             static_cast<double>(symbol_filter_pfb_arms),
@@ -39,7 +40,7 @@ boost::ut::suite SymbolFilterTests = [] {
             0.35,
             symbol_filter_pfb_arms * samples_per_symbol * 11U);
         auto& symbol_filter = fg.emplaceBlock<SymbolFilter<float, float, float>>(
-            { { "taps", rrc_taps_pfb },
+            { { "taps", pmt_value(rrc_taps_pfb) },
               { "num_arms", symbol_filter_pfb_arms },
               { "samples_per_symbol", samples_per_symbol } });
         auto& sink = fg.emplaceBlock<VectorSink<float>>();

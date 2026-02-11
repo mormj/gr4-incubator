@@ -26,15 +26,15 @@ int main(int argc, char* argv[])
     gr::Graph fg;
     auto& source = fg.emplaceBlock<gr::packet_modem::RandomSource<uint8_t>>(
         gr::packet_modem::make_props({
-            { "minimum", gr::packet_modem::pmt_value(uint8_t{ 0 }) },
-            { "maximum", gr::packet_modem::pmt_value(uint8_t{ 255 }) },
-            { "num_items", gr::packet_modem::pmt_value(1000000UZ) },
-            { "repeat", gr::packet_modem::pmt_value(true) },
+            { "minimum", uint8_t{ 0 } },
+            { "maximum", uint8_t{ 255 } },
+            { "num_items", 1000000UZ },
+            { "repeat", true },
         }));
     auto& unpack = fg.emplaceBlock<gr::packet_modem::UnpackBits<>>(
         gr::packet_modem::make_props({
-            { "outputs_per_input", gr::packet_modem::pmt_value(4UZ) },
-            { "bits_per_output", gr::packet_modem::pmt_value(uint8_t{ 2U }) },
+            { "outputs_per_input", 4UZ },
+            { "bits_per_output", uint8_t{ 2U } },
         }));
     const float a = std::sqrt(2.0f) / 2.0f;
     const std::vector<c64> qpsk_constellation = {
@@ -50,12 +50,12 @@ int main(int argc, char* argv[])
     auto& rrc_interp =
         fg.emplaceBlock<gr::packet_modem::InterpolatingFirFilter<c64, c64, float>>(
             gr::packet_modem::make_props({
-                { "interpolation", gr::packet_modem::pmt_value(sps) },
+                { "interpolation", sps },
                 { "taps", gr::packet_modem::pmt_value(rrc_taps) },
             }));
     auto& sink =
         fg.emplaceBlock<gr::packet_modem::FileSink<c64>>(
-            gr::packet_modem::make_props({ { "filename", gr::packet_modem::pmt_value(argv[1]) } }));
+            gr::packet_modem::make_props({ { "filename", argv[1] } }));
     auto& probe_rate = fg.emplaceBlock<gr::packet_modem::ProbeRate<c64>>();
     auto& message_debug = fg.emplaceBlock<gr::packet_modem::MessageDebug>();
     expect(eq(gr::ConnectionResult::SUCCESS, fg.connect<"out">(source).to<"in">(unpack)));

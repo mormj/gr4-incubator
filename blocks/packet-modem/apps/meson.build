@@ -1,10 +1,10 @@
 app_names = [
-  'packet_receiver_file',
-  'packet_receiver_soapy',
-  'packet_transceiver',
-  'packet_transmitter_pdu',
-  'packet_transmitter_pdu_throttle',
-  'packet_transmitter_sdr',
+#   'packet_receiver_file',
+#   'packet_receiver_soapy',
+#   'packet_transceiver',
+#   'packet_transmitter_pdu',
+#   'packet_transmitter_pdu_throttle',
+#   'packet_transmitter_sdr',
 ]
 
 foreach exe_name : app_names

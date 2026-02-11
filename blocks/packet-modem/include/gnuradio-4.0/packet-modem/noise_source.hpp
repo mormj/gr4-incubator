@@ -109,6 +109,7 @@ public:
                 throw gr::exception("invalid noise_type");
             }
         }
+        outSpan.publish(outSpan.size());
         return gr::work::Status::OK;
     }
     GR_MAKE_REFLECTABLE(NoiseSource, out, noise_type, amplitude, seed);

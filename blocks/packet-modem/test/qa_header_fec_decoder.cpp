@@ -41,7 +41,7 @@ boost::ut::suite HeaderFecDecoderTests = [] {
         expect(sched.runAndWait().has_value());
         const auto data = sink.data();
         expect(eq(data.size(), v.size()));
-        expect(eq(data, v));
+        expect(data == v);
         expect(sink.tags().empty());
     };
 

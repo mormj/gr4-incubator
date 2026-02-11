@@ -58,7 +58,7 @@ public:
 #endif
             out.publishTag(
                 gr::packet_modem::make_props(
-                    { { packet_len_tag_key, gr::packet_modem::pmt_value(packet_length) } }),
+                    { { packet_len_tag_key, packet_length } }),
                 static_cast<ssize_t>(index));
         }
         _count = (_count + n) % packet_length;

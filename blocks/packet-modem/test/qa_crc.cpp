@@ -66,7 +66,7 @@ boost::ut::suite CrcTests = [] {
         const auto crc16 = crc_calc.compute(v);
         expected.push_back(static_cast<uint8_t>((crc16 >> 8) & 0xFF));
         expected.push_back(static_cast<uint8_t>(crc16 & 0xFF));
-        expect(eq(data, expected));
+        expect(data == expected);
         const auto tags = sink.tags();
         expect(eq(tags.size(), 1_u));
         expect(eq(tags[0].index, 0_i));
@@ -103,7 +103,7 @@ boost::ut::suite CrcTests = [] {
         const auto crc16 = crc_calc.compute(v);
         expected.push_back(static_cast<uint8_t>((crc16 >> 8) & 0xFF));
         expected.push_back(static_cast<uint8_t>(crc16 & 0xFF));
-        expect(eq(pdu_out.data, expected));
+        expect(pdu_out.data == expected);
         expect(pdu_out.tags == pdu.tags);
     } | std::vector<size_t>{ 1U, 4U, 10U, 100U, 65536U, 100000U };
 
@@ -145,10 +145,10 @@ boost::ut::suite CrcTests = [] {
                 expect(eq(data.size(), packet_len));
                 const auto r = v | std::views::take(packet_len);
                 std::vector<uint8_t> expected_discard(r.begin(), r.end());
-                expect(eq(data, expected_discard));
+                expect(data == expected_discard);
             } else {
                 expect(eq(data.size(), packet_len + 2U));
-                expect(eq(data, v));
+                expect(data == v);
             }
             const auto tags = sink.tags();
             expect(eq(tags.size(), 1_u));

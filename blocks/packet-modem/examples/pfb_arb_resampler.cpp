@@ -29,10 +29,10 @@ int main()
     auto& resampler = fg.emplaceBlock<gr::packet_modem::PfbArbResampler<float>>(
         gr::packet_modem::make_props({
             { "taps", gr::packet_modem::pmt_value(gr::packet_modem::pfb_arb_taps) },
-            { "rate", gr::packet_modem::pmt_value(1.123456789f) },
+            { "rate", 1.123456789f },
         }));
     auto& sink = fg.emplaceBlock<gr::packet_modem::FileSink<float>>(
-        gr::packet_modem::make_props({ { "filename", gr::packet_modem::pmt_value("pfb_arb_resampler_out.f32") } }));
+        gr::packet_modem::make_props({ { "filename", "pfb_arb_resampler_out.f32" } }));
     expect(
         eq(gr::ConnectionResult::SUCCESS, fg.connect<"out">(source).to<"in">(resampler)));
     expect(

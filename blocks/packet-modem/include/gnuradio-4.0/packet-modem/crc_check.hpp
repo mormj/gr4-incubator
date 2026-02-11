@@ -201,7 +201,7 @@ public:
             }
             // modify packet_len tag
             gr::packet_modem::set_prop(_tag.map, packet_len_tag_key,
-                                       gr::packet_modem::pmt_value(output_size));
+                                       output_size);
             out.publishTag(_tag.map, 0);
             std::ranges::copy_n(
                 inSpan.begin(), static_cast<ssize_t>(output_size), outSpan.begin());

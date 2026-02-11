@@ -13,7 +13,7 @@ boost::ut::suite ThrottleTests = [] {
 
     "throttle"_test = [] {
         Graph fg;
-        const double samp_rate = 100e3;
+        const float samp_rate = 100e3f;
         auto& source = fg.emplaceBlock<NullSource<int>>();
         const size_t max_items_per_chunk = 100;
         auto& throttle = fg.emplaceBlock<Throttle<int>>(

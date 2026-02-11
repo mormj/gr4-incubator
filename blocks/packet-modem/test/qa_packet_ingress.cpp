@@ -74,7 +74,7 @@ boost::ut::suite PacketIngressTests = [] {
             expect(eq(pdu.data.size(), expected_packet_lengths[j]));
             std::vector<uint8_t> v(pdu.data.size());
             std::iota(v.begin(), v.end(), 0);
-            expect(eq(pdu.data, v));
+            expect(pdu.data == v);
         }
         const auto messages = meta_sink.data();
         expect(eq(messages.size(), expected_packet_lengths.size()));
@@ -141,7 +141,7 @@ boost::ut::suite PacketIngressTests = [] {
             expect(eq(pdu.data.size(), expected_packet_lengths[j]));
             std::vector<uint8_t> v(pdu.data.size());
             std::iota(v.begin(), v.end(), 0);
-            expect(eq(pdu.data, v));
+            expect(pdu.data == v);
         }
         const auto messages = meta_sink.data();
         expect(eq(messages.size(), expected_packet_lengths.size()));

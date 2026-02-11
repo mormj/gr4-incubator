@@ -55,7 +55,7 @@ boost::ut::suite SyncwordDetectionFilterTests = [] {
         expect(sched.runAndWait().has_value());
         const auto data = sink.data();
         expect(eq(data.size(), num_items));
-        expect(eq(data, v));
+        expect(data == v);
         const auto sink_tags = sink.tags();
         for (const auto& tag : sink_tags) {
             std::println("{} {}", tag.index, tag.map);

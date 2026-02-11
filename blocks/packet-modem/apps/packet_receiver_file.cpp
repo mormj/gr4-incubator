@@ -32,7 +32,7 @@ int main(int argc, char** argv)
     gr::Graph fg;
     auto& file_source =
         fg.emplaceBlock<gr::packet_modem::FileSource<c64>>(
-            gr::packet_modem::make_props({ { "filename", gr::packet_modem::pmt_value(argv[1]) } }));
+            gr::packet_modem::make_props({ { "filename", argv[1] } }));
     const size_t samples_per_symbol = 4;
     const bool header_debug = false;
     const bool zmq_output = true;
@@ -46,11 +46,11 @@ int main(int argc, char** argv)
                                                             syncword_freq_bins,
                                                             syncword_threshold);
     auto& packet_type_filter = fg.emplaceBlock<gr::packet_modem::PacketTypeFilter<>>(
-        gr::packet_modem::make_props({ { "packet_type", gr::packet_modem::pmt_value("user_data") } }));
+        gr::packet_modem::make_props({ { "packet_type", "user_data" } }));
     auto& tag_to_pdu = fg.emplaceBlock<gr::packet_modem::TaggedStreamToPdu<uint8_t>>();
     auto& sink = fg.emplaceBlock<gr::packet_modem::TunSink>(
-        gr::packet_modem::make_props({ { "tun_name", gr::packet_modem::pmt_value("gr4_tun_rx") },
-                                       { "netns_name", gr::packet_modem::pmt_value("gr4_rx") } }));
+        gr::packet_modem::make_props({ { "tun_name", "gr4_tun_rx" },
+                                       { "netns_name", "gr4_rx" } }));
 
     const char* connection_error = "connection error";
 

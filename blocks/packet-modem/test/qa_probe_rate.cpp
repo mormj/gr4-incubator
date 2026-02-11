@@ -15,12 +15,12 @@ boost::ut::suite ProbeRateTests = [] {
 
     "probe_rate"_test = [] {
         Graph fg;
-        const double samp_rate = 10e3;
+        const float samp_rate = 10e3f;
         auto& source = fg.emplaceBlock<NullSource<int>>();
         auto& throttle = fg.emplaceBlock<Throttle<int>>(
             { { "sample_rate", samp_rate }, { "maximum_items_per_chunk", 100UZ } });
         auto& probe_rate =
-            fg.emplaceBlock<ProbeRate<int>>({ { "min_update_time_secs", 1.0 } });
+            fg.emplaceBlock<ProbeRate<int>>({ { "min_update_time_secs", 1.0f } });
         auto& msg_debug = fg.emplaceBlock<MessageDebug>();
         expect(
             eq(ConnectionResult::SUCCESS, fg.connect<"out">(source).to<"in">(throttle)));

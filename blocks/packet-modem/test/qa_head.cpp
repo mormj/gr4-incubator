@@ -31,7 +31,7 @@ boost::ut::suite HeadTests = [] {
         const auto sink_data = sink.data();
         const auto r = v | std::views::take(static_cast<size_t>(num_head));
         const std::vector<int> expected(r.begin(), r.end());
-        expect(eq(sink.data(), expected));
+        expect(sink.data() == expected);
     };
 };
 

@@ -83,7 +83,7 @@ boost::ut::suite AdditiveScramblerTests = [] {
         scheduler::Simple sched;
         gr::packet_modem::init_scheduler(sched, std::move(fg));
         expect(sched.runAndWait().has_value());
-        expect(eq(sink.data(), expected));
+        expect(sink.data() == expected);
     };
 
     "additive_scrambler_reset"_test = [] {

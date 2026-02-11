@@ -19,9 +19,9 @@ int main()
 
     std::vector<uint8_t> data(10);
     const std::vector<gr::Tag> tags = {
-        { 0, gr::packet_modem::make_props({ { "packet_len", gr::packet_modem::pmt_value(8U) } }) },
-        { 1, gr::packet_modem::make_props({ { "foo", gr::packet_modem::pmt_value("bar") } }) },
-        { 8, gr::packet_modem::make_props({ { "packet_len", gr::packet_modem::pmt_value(2U) } }) },
+        { 0, gr::packet_modem::make_props({ { "packet_len", 8U } }) },
+        { 1, gr::packet_modem::make_props({ { "foo", "bar" } }) },
+        { 8, gr::packet_modem::make_props({ { "packet_len", 2U } }) },
     };
     // Uncomment just one of these two sources
     //
@@ -37,12 +37,12 @@ int main()
 
     auto& crc_append = fg.emplaceBlock<gr::packet_modem::CrcAppend<>>(
         gr::packet_modem::make_props({
-            { "num_bits", gr::packet_modem::pmt_value(16U) },
-            { "poly", gr::packet_modem::pmt_value(uint64_t{ 0x1021 }) },
-            { "initial_value", gr::packet_modem::pmt_value(uint64_t{ 0xFFFF }) },
-            { "final_xor", gr::packet_modem::pmt_value(uint64_t{ 0xFFFF }) },
-            { "input_reflected", gr::packet_modem::pmt_value(true) },
-            { "result_reflected", gr::packet_modem::pmt_value(true) },
+            { "num_bits", 16U },
+            { "poly", uint64_t{ 0x1021 } },
+            { "initial_value", uint64_t{ 0xFFFF } },
+            { "final_xor", uint64_t{ 0xFFFF } },
+            { "input_reflected", true },
+            { "result_reflected", true },
         }));
     auto& sink = fg.emplaceBlock<gr::packet_modem::VectorSink<uint8_t>>();
     expect(eq(gr::ConnectionResult::SUCCESS,

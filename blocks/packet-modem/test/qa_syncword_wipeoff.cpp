@@ -1,6 +1,7 @@
 #include <gnuradio-4.0/Graph.hpp>
 #include <gnuradio-4.0/Scheduler.hpp>
 #include <gnuradio-4.0/packet-modem/scheduler_helpers.hpp>
+#include <gnuradio-4.0/packet-modem/pmt_helpers.hpp>
 #include <gnuradio-4.0/packet-modem/syncword_wipeoff.hpp>
 #include <gnuradio-4.0/packet-modem/vector_sink.hpp>
 #include <gnuradio-4.0/packet-modem/vector_source.hpp>
@@ -35,7 +36,7 @@ boost::ut::suite SyncwordWipeoffTests = [] {
         source.data = v;
         auto& syncword_wipeoff =
             fg.emplaceBlock<gr::packet_modem::SyncwordWipeoff<int, int>>(
-                { { "syncword", syncword } });
+                { { "syncword", pmt_value(syncword) } });
         auto& sink = fg.emplaceBlock<VectorSink<int>>();
         expect(eq(ConnectionResult::SUCCESS,
                   fg.connect<"out">(source).to<"in">(syncword_wipeoff)));
@@ -46,7 +47,7 @@ boost::ut::suite SyncwordWipeoffTests = [] {
         expect(sched.runAndWait().has_value());
         const auto data = sink.data();
         expect(eq(data.size(), num_items));
-        expect(eq(data, expected));
+        expect(data == expected);
     };
 };
 

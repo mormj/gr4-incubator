@@ -23,15 +23,15 @@ int main()
     std::vector<gr::Tag> tags;
     for (const auto len : packet_lengths) {
         gr::property_map props =
-            gr::packet_modem::make_props({ { "packet_len", gr::packet_modem::pmt_value(len) } });
+            gr::packet_modem::make_props({ { "packet_len", len } });
         if (len > std::numeric_limits<uint16_t>::max()) {
-            gr::packet_modem::set_prop(props, "invalid", gr::packet_modem::pmt_value(true));
+            gr::packet_modem::set_prop(props, "invalid", true);
         }
         tags.push_back({ static_cast<ssize_t>(offset), props });
         if (len > 50) {
             tags.push_back({ static_cast<ssize_t>(offset + 40),
                              gr::packet_modem::make_props(
-                                 { { "packet_rest", gr::packet_modem::pmt_value(true) } }) });
+                                 { { "packet_rest", true } }) });
         }
         offset += len;
     }
@@ -61,7 +61,7 @@ int main()
             toScheduler,
             "",
             gr::block::property::kLifeCycleState,
-            gr::packet_modem::make_props({ { "state", gr::packet_modem::pmt_value("REQUESTED_STOP") } }));
+            gr::packet_modem::make_props({ { "state", "REQUESTED_STOP" } }));
     });
 
     expect(sched.runAndWait().has_value());

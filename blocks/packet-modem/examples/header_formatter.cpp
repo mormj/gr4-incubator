@@ -16,10 +16,10 @@ int main()
     gr::Graph fg;
 
     const gr::property_map message =
-        gr::packet_modem::make_props({ { "packet_length", gr::packet_modem::pmt_value(1234U) },
-                                       { "packet_type", gr::packet_modem::pmt_value("user_data") } });
+        gr::packet_modem::make_props({ { "packet_length", 1234U },
+                                       { "packet_type", "user_data" } });
     auto& strobe = fg.emplaceBlock<gr::packet_modem::ItemStrobe<gr::Message>>(
-        gr::packet_modem::make_props({ { "interval_secs", gr::packet_modem::pmt_value(0.1) } }));
+        gr::packet_modem::make_props({ { "interval_secs", 0.1 } }));
     strobe.item.data = message;
     auto& header_formatter = fg.emplaceBlock<gr::packet_modem::HeaderFormatter<>>();
     auto& sink = fg.emplaceBlock<gr::packet_modem::VectorSink<uint8_t>>();
@@ -40,7 +40,7 @@ int main()
             toScheduler,
             "",
             gr::block::property::kLifeCycleState,
-            gr::packet_modem::make_props({ { "state", gr::packet_modem::pmt_value("REQUESTED_STOP") } }));
+            gr::packet_modem::make_props({ { "state", "REQUESTED_STOP" } }));
     });
 
     expect(sched.runAndWait().has_value());

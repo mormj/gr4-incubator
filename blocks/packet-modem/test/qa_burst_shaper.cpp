@@ -31,7 +31,7 @@ boost::ut::suite BurstShaperTests = [] {
         const std::vector<float> leading = { 0.1f, 0.5f, 0.9f };
         const std::vector<float> trailing = { 0.8f, 0.2f };
         auto& burst_shaper = fg.emplaceBlock<BurstShaper<float>>(
-            { { "leading_shape", leading }, { "trailing_shape", trailing } });
+            { { "leading_shape", pmt_value(leading) }, { "trailing_shape", pmt_value(trailing) } });
         auto& tagged_to_pdu = fg.emplaceBlock<TaggedStreamToPdu<float>>();
         auto& sink = fg.emplaceBlock<VectorSink<Pdu<float>>>();
         expect(eq(ConnectionResult::SUCCESS,
@@ -67,13 +67,13 @@ boost::ut::suite BurstShaperTests = [] {
             const std::vector<float> expected_leading(r1.begin(), r1.end());
             const auto r2 = pdu.data | std::views::take(leading.size());
             const std::vector<float> pdu_leading(r2.begin(), r2.end());
-            expect(eq(pdu_leading, expected_leading));
+            expect(pdu_leading == expected_leading);
             if (packet_lengths[j] > leading.size() + trailing.size()) {
                 const std::vector<float> middle(pdu.data.cbegin() + std::ssize(leading),
                                                 pdu.data.cend() - std::ssize(trailing));
                 const std::vector<float> expected_middle(
                     packet_lengths[j] - leading.size() - trailing.size(), 1.0f);
-                expect(eq(middle, expected_middle));
+                expect(middle == expected_middle);
             }
             if (packet_lengths[j] > leading.size()) {
                 const auto n = static_cast<ssize_t>(
@@ -82,7 +82,7 @@ boost::ut::suite BurstShaperTests = [] {
                                                       pdu.data.cend());
                 const std::vector<float> expected_trailing(trailing.cend() - n,
                                                            trailing.cend());
-                expect(eq(pdu_trailing, expected_trailing));
+                expect(pdu_trailing == expected_trailing);
             }
         }
     };
@@ -103,7 +103,7 @@ boost::ut::suite BurstShaperTests = [] {
         const std::vector<float> leading = { 0.1f, 0.5f, 0.9f };
         const std::vector<float> trailing = { 0.8f, 0.2f };
         auto& burst_shaper = fg.emplaceBlock<BurstShaper<Pdu<float>, Pdu<float>, float>>(
-            { { "leading_shape", leading }, { "trailing_shape", trailing } });
+            { { "leading_shape", pmt_value(leading) }, { "trailing_shape", pmt_value(trailing) } });
         auto& sink = fg.emplaceBlock<VectorSink<Pdu<float>>>();
         expect(eq(ConnectionResult::SUCCESS,
                   fg.connect<"out">(source).to<"in">(burst_shaper)));
@@ -121,13 +121,13 @@ boost::ut::suite BurstShaperTests = [] {
             const std::vector<float> expected_leading(r1.begin(), r1.end());
             const auto r2 = pdu.data | std::views::take(leading.size());
             const std::vector<float> pdu_leading(r2.begin(), r2.end());
-            expect(eq(pdu_leading, expected_leading));
+            expect(pdu_leading == expected_leading);
             if (packet_lengths[j] > leading.size() + trailing.size()) {
                 const std::vector<float> middle(pdu.data.cbegin() + std::ssize(leading),
                                                 pdu.data.cend() - std::ssize(trailing));
                 const std::vector<float> expected_middle(
                     packet_lengths[j] - leading.size() - trailing.size(), 1.0f);
-                expect(eq(middle, expected_middle));
+                expect(middle == expected_middle);
             }
             if (packet_lengths[j] > leading.size()) {
                 const auto n = static_cast<ssize_t>(
@@ -136,7 +136,7 @@ boost::ut::suite BurstShaperTests = [] {
                                                       pdu.data.cend());
                 const std::vector<float> expected_trailing(trailing.cend() - n,
                                                            trailing.cend());
-                expect(eq(pdu_trailing, expected_trailing));
+                expect(pdu_trailing == expected_trailing);
             }
         }
     };

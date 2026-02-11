@@ -133,7 +133,7 @@ public:
                 std::accumulate(_packet_lens.cbegin(), _packet_lens.cend(), 0));
             out.publishTag(
                 gr::packet_modem::make_props(
-                    { { packet_len_tag, gr::packet_modem::pmt_value(total_len) } }),
+                    { { packet_len_tag, total_len } }),
                 0);
         }
 

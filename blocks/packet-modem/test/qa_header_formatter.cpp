@@ -52,7 +52,7 @@ boost::ut::suite HeaderFormatterTests = [] {
         expect(8_u <= pdus.size() && pdus.size() <= 20_u);
         std::vector<uint8_t> expected_header = { 0x04, 0xd2, 0x00, 0x55 };
         for (const auto& pdu : pdus) {
-            expect(eq(pdu.data, expected_header));
+            expect(pdu.data == expected_header);
         }
     };
 
@@ -92,7 +92,7 @@ boost::ut::suite HeaderFormatterTests = [] {
         expect(8_u <= pdus.size() && pdus.size() <= 20_u);
         std::vector<uint8_t> expected_header = { 0x04, 0xd2, 0x00, 0x55 };
         for (const auto& pdu : pdus) {
-            expect(eq(pdu.data, expected_header));
+            expect(pdu.data == expected_header);
         }
     };
 };

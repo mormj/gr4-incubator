@@ -58,8 +58,8 @@ int main(int argc, char** argv)
     auto& source = fg.emplaceBlock<gr::packet_modem::TunSource>(
         gr::packet_modem::make_props({ { "tun_name", gr::packet_modem::pmt_value(std::string("gr4_tun_tx")) },
                                        { "netns_name", gr::packet_modem::pmt_value(std::string("gr4_tx")) },
-                                       { "max_packets", gr::packet_modem::pmt_value(2UZ) },
-                                       { "idle_packet_size", gr::packet_modem::pmt_value(stream_mode ? 256UZ : 0UZ) } }));
+                                       { "max_packets", 2UZ },
+                                       { "idle_packet_size", stream_mode ? 256UZ : 0UZ } }));
     const size_t max_in_samples = 1U;
     // note that buffer size is rounded up to a multiple of
     // lcm(sizeof(Pdu<T>), getpagesize()), but different values that round up to
@@ -68,19 +68,19 @@ int main(int argc, char** argv)
     auto packet_transmitter_pdu = gr::packet_modem::PacketTransmitterPdu(
         fg, stream_mode, samples_per_symbol, max_in_samples, out_buff_size);
     auto& throttle = fg.emplaceBlock<gr::packet_modem::Throttle<c64>>(
-        gr::packet_modem::make_props({ { "sample_rate", gr::packet_modem::pmt_value(samp_rate) },
-                                       { "maximum_items_per_chunk", gr::packet_modem::pmt_value(1000UZ) } }));
+        gr::packet_modem::make_props({ { "sample_rate", samp_rate },
+                                       { "maximum_items_per_chunk", 1000UZ } }));
     auto& probe_rate = fg.emplaceBlock<gr::packet_modem::ProbeRate<c64>>();
     auto& message_debug = fg.emplaceBlock<gr::packet_modem::MessageDebug>();
     auto& resampler = fg.emplaceBlock<gr::packet_modem::PfbArbResampler<c64, c64, float>>(
-        gr::packet_modem::make_props({ { "taps", gr::packet_modem::pmt_value(gr::packet_modem::pfb_arb_taps) },
-                                       { "rate", gr::packet_modem::pmt_value(1.0f + 1e-6f * sfo_ppm) } }));
+        gr::packet_modem::make_props({ { "taps", gr::Tensor<float>(gr::data_from, gr::packet_modem::pfb_arb_taps) },
+                                       { "rate", 1.0f + 1e-6f * sfo_ppm } }));
     auto& rotator =
         fg.emplaceBlock<gr::packet_modem::Rotator<>>(
-            gr::packet_modem::make_props({ { "phase_incr", gr::packet_modem::pmt_value(freq_error) } }));
+            gr::packet_modem::make_props({ { "phase_incr", freq_error } }));
     auto& noise_source = fg.emplaceBlock<gr::packet_modem::NoiseSource<c64>>(
         gr::packet_modem::make_props({ { "noise_type", gr::packet_modem::pmt_value(std::string("gaussian")) },
-                                       { "amplitude", gr::packet_modem::pmt_value(noise_amplitude) } }));
+                                       { "amplitude", noise_amplitude } }));
     auto& add_noise = fg.emplaceBlock<gr::packet_modem::Add<c64>>();
     const bool header_debug = false;
     const bool zmq_output = true;
@@ -104,7 +104,7 @@ int main(int argc, char** argv)
 
     if (stream_mode) {
         auto& packet_counter = fg.emplaceBlock<gr::packet_modem::PacketCounter<c64>>(
-            gr::packet_modem::make_props({ { "drop_tags", gr::packet_modem::pmt_value(true) } }));
+            gr::packet_modem::make_props({ { "drop_tags", true } }));
         if (fg.connect<"out">(*packet_transmitter_pdu.rrc_interp)
                 .to<"in">(packet_counter) != gr::ConnectionResult::SUCCESS) {
             throw gr::exception(connection_error);

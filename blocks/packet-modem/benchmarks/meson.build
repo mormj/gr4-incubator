@@ -1,6 +1,6 @@
 bench_names = [
-  'benchmark_packet_receiver',
-  'benchmark_packet_transceiver',
+  # 'benchmark_packet_receiver',
+  # 'benchmark_packet_transceiver',
 ]
 
 foreach exe_name : bench_names
