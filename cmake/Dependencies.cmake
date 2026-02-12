@@ -93,7 +93,7 @@ endfunction()
 
 function(_gr4_incubator_setup_gui_contract)
   set(GR4I_GUI_READY FALSE PARENT_SCOPE)
-  set(GR4I_GLFW_TARGET \"\" PARENT_SCOPE)
+  set(GR4I_GLFW_TARGET "" PARENT_SCOPE)
 
   # Optional package route first
   find_package(implot CONFIG QUIET)
@@ -106,13 +106,47 @@ function(_gr4_incubator_setup_gui_contract)
   if(NOT _implot_ok)
     set(_implot_include "")
     set(_implot_lib "")
+    # Avoid stale cache values from previous configure attempts.
+    unset(_implot_include CACHE)
+    unset(_implot_lib CACHE)
+
+    # Fast-path for common local install location used by our Dockerfile.
+    if(EXISTS "/usr/local/include/implot.h")
+      set(_implot_include "/usr/local/include")
+    endif()
+    if(EXISTS "/usr/local/lib/libimplot.so")
+      set(_implot_lib "/usr/local/lib/libimplot.so")
+    endif()
 
     if(IMPLOT_SOURCE_DIR)
       find_path(_implot_include implot.h HINTS "${IMPLOT_SOURCE_DIR}")
       find_library(_implot_lib NAMES implot HINTS "${IMPLOT_SOURCE_DIR}" "${IMPLOT_SOURCE_DIR}/build" "${IMPLOT_SOURCE_DIR}/lib")
     else()
-      find_path(_implot_include implot.h)
-      find_library(_implot_lib NAMES implot)
+      # Common system install locations for distro/local builds.
+      if(NOT _implot_include)
+        find_path(_implot_include implot.h
+        HINTS /usr/local/include /usr/include
+        PATH_SUFFIXES implot
+        )
+      endif()
+      if(NOT _implot_lib)
+        find_library(_implot_lib NAMES implot
+        HINTS /usr/local/lib /usr/local/lib64 /usr/lib /usr/lib64 /usr/lib/x86_64-linux-gnu
+        )
+      endif()
+    endif()
+
+    # Optional pkg-config fallback.
+    if((NOT _implot_include OR NOT _implot_lib))
+      pkg_check_modules(GR4I_IMPLOT QUIET implot)
+      if(GR4I_IMPLOT_FOUND)
+        if(NOT _implot_include AND GR4I_IMPLOT_INCLUDE_DIRS)
+          list(GET GR4I_IMPLOT_INCLUDE_DIRS 0 _implot_include)
+        endif()
+        if(NOT _implot_lib AND GR4I_IMPLOT_LINK_LIBRARIES)
+          list(GET GR4I_IMPLOT_LINK_LIBRARIES 0 _implot_lib)
+        endif()
+      endif()
     endif()
 
     if(_implot_include AND _implot_lib)
@@ -126,6 +160,8 @@ function(_gr4_incubator_setup_gui_contract)
   endif()
 
   set(_imgui_ok FALSE)
+  set(_imgui_include "")
+  set(_imgui_lib "")
   if(TARGET imgui::imgui)
     set(_imgui_ok TRUE)
   else()
@@ -134,8 +170,29 @@ function(_gr4_incubator_setup_gui_contract)
       set(_imgui_ok TRUE)
     else()
       find_path(_imgui_include imgui.h)
+      if(NOT _imgui_include)
+        # Common distro layout: /usr/include/imgui/imgui.h
+        find_path(_imgui_include imgui.h PATH_SUFFIXES imgui)
+      endif()
+      if(NOT _imgui_include)
+        # Some packages expose imgui only via pkg-config include dirs.
+        pkg_check_modules(GR4I_IMGUI QUIET imgui)
+        if(GR4I_IMGUI_FOUND)
+          set(_imgui_ok TRUE)
+          set(_imgui_pkg_includes "${GR4I_IMGUI_INCLUDE_DIRS}")
+          set(_imgui_pkg_libs "${GR4I_IMGUI_LINK_LIBRARIES}")
+          add_library(gr4_incubator_imgui_pkg INTERFACE)
+          if(_imgui_pkg_includes)
+            target_include_directories(gr4_incubator_imgui_pkg INTERFACE ${_imgui_pkg_includes})
+          endif()
+          if(_imgui_pkg_libs)
+            target_link_libraries(gr4_incubator_imgui_pkg INTERFACE ${_imgui_pkg_libs})
+          endif()
+          add_library(gr4_incubator::imgui ALIAS gr4_incubator_imgui_pkg)
+        endif()
+      endif()
       find_library(_imgui_lib NAMES imgui)
-      if(_imgui_include AND _imgui_lib)
+      if(NOT _imgui_ok AND _imgui_include AND _imgui_lib)
         add_library(gr4_incubator_imgui UNKNOWN IMPORTED)
         set_target_properties(gr4_incubator_imgui PROPERTIES
           IMPORTED_LOCATION "${_imgui_lib}"
@@ -147,9 +204,16 @@ function(_gr4_incubator_setup_gui_contract)
   endif()
 
   find_package(OpenGL QUIET)
-  _gr4_incubator_optional_pkgconfig(_glfw_target _glfw_found glfw3)
-  if(_glfw_found)
-    set(GR4I_GLFW_TARGET \"${_glfw_target}\" PARENT_SCOPE)
+  set(_glfw_found FALSE)
+  find_package(glfw3 CONFIG QUIET)
+  if(TARGET glfw)
+    set(_glfw_found TRUE)
+    set(_glfw_target glfw)
+  else()
+    _gr4_incubator_optional_pkgconfig(_glfw_target _glfw_found glfw3)
+  endif()
+  if(_glfw_found AND _glfw_target)
+    set(GR4I_GLFW_TARGET "${_glfw_target}" PARENT_SCOPE)
   endif()
 
   if(_implot_ok AND _imgui_ok AND OpenGL_FOUND AND _glfw_found)
@@ -159,6 +223,9 @@ function(_gr4_incubator_setup_gui_contract)
   if(ENABLE_GUI_EXAMPLES AND NOT (_implot_ok AND _imgui_ok AND OpenGL_FOUND AND _glfw_found))
     message(FATAL_ERROR
       "ENABLE_GUI_EXAMPLES=ON but GUI deps are incomplete. Required: imgui, implot, OpenGL, glfw3. "
+      "Detected: imgui=${_imgui_ok}, implot=${_implot_ok}, OpenGL=${OpenGL_FOUND}, glfw3=${_glfw_found}. "
+      "imgui include='${_imgui_include}' lib='${_imgui_lib}', "
+      "implot include='${_implot_include}' lib='${_implot_lib}'. "
       "Provide system packages or set IMPLOT_SOURCE_DIR for implot.")
   endif()
 
