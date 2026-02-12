@@ -1,6 +1,5 @@
 include_guard(GLOBAL)
 
-include(CMakeDependentOption)
 find_package(PkgConfig REQUIRED)
 
 function(_gr4_incubator_require_pkgconfig out_target module_name)
@@ -106,50 +105,59 @@ function(_gr4_incubator_setup_gui_contract)
   if(NOT _implot_ok)
     set(_implot_include "")
     set(_implot_lib "")
-    # Avoid stale cache values from previous configure attempts.
-    unset(_implot_include CACHE)
-    unset(_implot_lib CACHE)
+    set(_implot_pkg_target "")
+    set(_implot_prefix_hints ${CMAKE_PREFIX_PATH} ${CMAKE_SYSTEM_PREFIX_PATH} ${CMAKE_INSTALL_PREFIX})
+    list(REMOVE_DUPLICATES _implot_prefix_hints)
 
-    # Fast-path for common local install location used by our Dockerfile.
-    if(EXISTS "/usr/local/include/implot.h")
-      set(_implot_include "/usr/local/include")
+    if(IMPLOT_SOURCE_DIR)
+      find_path(_implot_include implot.h
+        HINTS "${IMPLOT_SOURCE_DIR}"
+        NO_CACHE
+      )
+      find_library(_implot_lib NAMES implot
+        HINTS "${IMPLOT_SOURCE_DIR}" "${IMPLOT_SOURCE_DIR}/build" "${IMPLOT_SOURCE_DIR}/lib" "${IMPLOT_SOURCE_DIR}/lib64"
+        NO_CACHE
+      )
+    else()
+      find_path(_implot_include implot.h
+        HINTS ${_implot_prefix_hints}
+        PATHS /usr/local /usr
+        PATH_SUFFIXES include include/implot implot
+        NO_CACHE
+      )
+      find_library(_implot_lib NAMES implot
+        HINTS ${_implot_prefix_hints}
+        PATHS /usr/local /usr
+        PATH_SUFFIXES lib lib64
+        NO_CACHE
+      )
     endif()
-    if(EXISTS "/usr/local/lib/libimplot.so")
+
+    # Deterministic fallback for common local install layout.
+    if((NOT _implot_include OR NOT _implot_lib)
+        AND EXISTS "/usr/local/include/implot.h"
+        AND EXISTS "/usr/local/lib/libimplot.so")
+      set(_implot_include "/usr/local/include")
       set(_implot_lib "/usr/local/lib/libimplot.so")
     endif()
 
-    if(IMPLOT_SOURCE_DIR)
-      find_path(_implot_include implot.h HINTS "${IMPLOT_SOURCE_DIR}")
-      find_library(_implot_lib NAMES implot HINTS "${IMPLOT_SOURCE_DIR}" "${IMPLOT_SOURCE_DIR}/build" "${IMPLOT_SOURCE_DIR}/lib")
-    else()
-      # Common system install locations for distro/local builds.
-      if(NOT _implot_include)
-        find_path(_implot_include implot.h
-        HINTS /usr/local/include /usr/include
-        PATH_SUFFIXES implot
-        )
-      endif()
-      if(NOT _implot_lib)
-        find_library(_implot_lib NAMES implot
-        HINTS /usr/local/lib /usr/local/lib64 /usr/lib /usr/lib64 /usr/lib/x86_64-linux-gnu
-        )
-      endif()
+    if(IMPLOT_INCLUDE_DIR)
+      set(_implot_include "${IMPLOT_INCLUDE_DIR}")
+    endif()
+    if(IMPLOT_LIBRARY)
+      set(_implot_lib "${IMPLOT_LIBRARY}")
     endif()
 
-    # Optional pkg-config fallback.
+    # Optional pkg-config fallback (canonical system-deps path).
     if((NOT _implot_include OR NOT _implot_lib))
-      pkg_check_modules(GR4I_IMPLOT QUIET implot)
+      pkg_check_modules(GR4I_IMPLOT QUIET IMPORTED_TARGET implot)
       if(GR4I_IMPLOT_FOUND)
-        if(NOT _implot_include AND GR4I_IMPLOT_INCLUDE_DIRS)
-          list(GET GR4I_IMPLOT_INCLUDE_DIRS 0 _implot_include)
-        endif()
-        if(NOT _implot_lib AND GR4I_IMPLOT_LINK_LIBRARIES)
-          list(GET GR4I_IMPLOT_LINK_LIBRARIES 0 _implot_lib)
-        endif()
+        set(_implot_ok TRUE)
+        set(_implot_pkg_target PkgConfig::GR4I_IMPLOT)
       endif()
     endif()
 
-    if(_implot_include AND _implot_lib)
+    if(NOT _implot_ok AND _implot_include AND _implot_lib)
       add_library(gr4_incubator_implot UNKNOWN IMPORTED)
       set_target_properties(gr4_incubator_implot PROPERTIES
         IMPORTED_LOCATION "${_implot_lib}"
@@ -157,11 +165,15 @@ function(_gr4_incubator_setup_gui_contract)
       add_library(gr4_incubator::implot ALIAS gr4_incubator_implot)
       set(_implot_ok TRUE)
     endif()
+    if(_implot_ok AND _implot_pkg_target AND NOT TARGET gr4_incubator::implot)
+      add_library(gr4_incubator::implot ALIAS ${_implot_pkg_target})
+    endif()
   endif()
 
   set(_imgui_ok FALSE)
   set(_imgui_include "")
   set(_imgui_lib "")
+  set(_imgui_pkg_target "")
   if(TARGET imgui::imgui)
     set(_imgui_ok TRUE)
   else()
@@ -174,21 +186,12 @@ function(_gr4_incubator_setup_gui_contract)
         # Common distro layout: /usr/include/imgui/imgui.h
         find_path(_imgui_include imgui.h PATH_SUFFIXES imgui)
       endif()
-      if(NOT _imgui_include)
-        # Some packages expose imgui only via pkg-config include dirs.
-        pkg_check_modules(GR4I_IMGUI QUIET imgui)
+      if(NOT _imgui_include OR NOT _imgui_lib)
+        # Some packages expose imgui through pkg-config only.
+        pkg_check_modules(GR4I_IMGUI QUIET IMPORTED_TARGET imgui)
         if(GR4I_IMGUI_FOUND)
           set(_imgui_ok TRUE)
-          set(_imgui_pkg_includes "${GR4I_IMGUI_INCLUDE_DIRS}")
-          set(_imgui_pkg_libs "${GR4I_IMGUI_LINK_LIBRARIES}")
-          add_library(gr4_incubator_imgui_pkg INTERFACE)
-          if(_imgui_pkg_includes)
-            target_include_directories(gr4_incubator_imgui_pkg INTERFACE ${_imgui_pkg_includes})
-          endif()
-          if(_imgui_pkg_libs)
-            target_link_libraries(gr4_incubator_imgui_pkg INTERFACE ${_imgui_pkg_libs})
-          endif()
-          add_library(gr4_incubator::imgui ALIAS gr4_incubator_imgui_pkg)
+          set(_imgui_pkg_target PkgConfig::GR4I_IMGUI)
         endif()
       endif()
       find_library(_imgui_lib NAMES imgui)
@@ -199,6 +202,9 @@ function(_gr4_incubator_setup_gui_contract)
           INTERFACE_INCLUDE_DIRECTORIES "${_imgui_include}")
         add_library(gr4_incubator::imgui ALIAS gr4_incubator_imgui)
         set(_imgui_ok TRUE)
+      endif()
+      if(_imgui_ok AND _imgui_pkg_target AND NOT TARGET gr4_incubator::imgui)
+        add_library(gr4_incubator::imgui ALIAS ${_imgui_pkg_target})
       endif()
     endif()
   endif()
@@ -226,7 +232,7 @@ function(_gr4_incubator_setup_gui_contract)
       "Detected: imgui=${_imgui_ok}, implot=${_implot_ok}, OpenGL=${OpenGL_FOUND}, glfw3=${_glfw_found}. "
       "imgui include='${_imgui_include}' lib='${_imgui_lib}', "
       "implot include='${_implot_include}' lib='${_implot_lib}'. "
-      "Provide system packages or set IMPLOT_SOURCE_DIR for implot.")
+      "Provide system packages, set CMAKE_PREFIX_PATH, or set IMPLOT_SOURCE_DIR/IMPLOT_INCLUDE_DIR/IMPLOT_LIBRARY.")
   endif()
 
   if(NOT ENABLE_GUI_EXAMPLES)
@@ -241,7 +247,7 @@ function(gr4_incubator_resolve_dependencies)
   set(GR4I_GNURADIO4_TARGET "${GR4I_GNURADIO4_TARGET}" PARENT_SCOPE)
 
   # Keep explicit blocklib-core linkage equivalent to Meson setup.
-  find_library(GR4I_BLOCKLIB_CORE_LIB NAMES gnuradio-blocklib-core PATHS /usr/local/lib REQUIRED)
+  find_library(GR4I_BLOCKLIB_CORE_LIB NAMES gnuradio-blocklib-core REQUIRED)
   add_library(gr4_incubator_blocklib_core UNKNOWN IMPORTED)
   set_target_properties(gr4_incubator_blocklib_core PROPERTIES IMPORTED_LOCATION "${GR4I_BLOCKLIB_CORE_LIB}")
   add_library(gr4_incubator::blocklib_core ALIAS gr4_incubator_blocklib_core)

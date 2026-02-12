@@ -14,6 +14,8 @@ option(ENABLE_PLUGINS "Enable plugin build path (unsupported in CMake for now)" 
 option(WARNINGS_AS_ERRORS "Treat compiler warnings as errors" OFF)
 
 set(IMPLOT_SOURCE_DIR "" CACHE PATH "Path to an implot source tree (contains implot.h)")
+set(IMPLOT_INCLUDE_DIR "" CACHE PATH "Override include directory containing implot.h")
+set(IMPLOT_LIBRARY "" CACHE FILEPATH "Override ImPlot library file (e.g. /usr/local/lib/libimplot.so)")
 
 if(ENABLE_PLUGINS)
   message(FATAL_ERROR "ENABLE_PLUGINS=ON is not supported in CMake yet. Plugin bootstrap remains Meson-only.")
