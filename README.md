@@ -43,3 +43,23 @@ The tree is organized around creating multiple modules under the `blocks` direct
 ## Examples
 
 Examples that exercise multiple modules
+
+## CMake (WIP migration path)
+
+The CMake build is being introduced incrementally alongside Meson.
+
+- System dependencies only: CMake does not use `subprojects/` or `FetchContent`.
+- Plugins are hard-disabled in CMake for now (`ENABLE_PLUGINS=ON` errors out).
+- GUI examples are optional and disabled by default:
+  - `-DENABLE_GUI_EXAMPLES=OFF` (default)
+  - `-DENABLE_GUI_EXAMPLES=ON` requires system `imgui`, `implot`, `glfw3`, and `OpenGL`.
+  - If `implot` is not packaged, provide `-DIMPLOT_SOURCE_DIR=/path/to/implot`.
+
+Example configure:
+
+```bash
+cmake -S . -B build-cmake -G Ninja \
+  -DENABLE_EXAMPLES=ON \
+  -DENABLE_GUI_EXAMPLES=OFF \
+  -DENABLE_TESTING=ON
+```

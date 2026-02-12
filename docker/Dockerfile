@@ -21,6 +21,8 @@ RUN apt-get update -q  && apt-get install --no-install-recommends -qy wget gpg c
     libxcursor-dev \
     libxi-dev \
     libx11-dev \
+    librtaudio-dev \
+    libcli11-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # UHD: download only B200 images and install udev rules
