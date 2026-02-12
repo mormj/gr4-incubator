@@ -291,6 +291,7 @@ function(gr4_incubator_resolve_dependencies)
     endif()
 
     _gr4_incubator_setup_gui_contract()
+    set(GR4I_GLFW_TARGET "${GR4I_GLFW_TARGET}" PARENT_SCOPE)
     set(GR4I_GUI_READY "${GR4I_GUI_READY}" PARENT_SCOPE)
   else()
     set(GR4I_RTAUDIO_TARGET "" PARENT_SCOPE)
