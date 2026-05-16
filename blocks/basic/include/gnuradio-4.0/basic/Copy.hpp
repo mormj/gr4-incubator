@@ -12,7 +12,12 @@ GR_REGISTER_BLOCK("gr::incubator::basic::Copy", gr::incubator::basic::Copy, ([T]
 template<typename T>
 struct Copy : Block<Copy<T>> {
 
-    using Description = Doc<"@brief Copies from input to output.">;
+    using Description = Doc<
+        "Identity 1:1 passthrough block. Forwards every input sample to the output unchanged. "
+        "Useful as: a fan-out adapter connecting one source to multiple downstream consumers; "
+        "a tag injection point to attach tags without modifying the data path; "
+        "a chain placeholder while the real processing block is being written; "
+        "or a benchmark baseline to measure graph scheduling overhead with zero compute.">;
 
     PortIn<T> in;
     PortOut<T> out;
