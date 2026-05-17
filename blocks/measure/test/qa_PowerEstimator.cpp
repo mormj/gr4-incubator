@@ -100,9 +100,9 @@ const boost::ut::suite<"PowerEstimator graph"> powerEstimatorGraphTests = [] {
         src.data   = data;
         auto& blk = graph.emplaceBlock<gr::incubator::measure::PowerEstimator<float>>();
         auto& snk = graph.emplaceBlock<gr::incubator::basic::VectorSink<float>>();
-        expect(graph.connect<"out">(src).to<"in">(blk) == gr::ConnectionResult::SUCCESS)
+        expect(graph.connect<"out", "in">(src, blk).has_value())
             << "VectorSource → PowerEstimator";
-        expect(graph.connect<"out">(blk).to<"in">(snk) == gr::ConnectionResult::SUCCESS)
+        expect(graph.connect<"out", "in">(blk, snk).has_value())
             << "PowerEstimator → VectorSink";
         gr::scheduler::Simple sched;
 

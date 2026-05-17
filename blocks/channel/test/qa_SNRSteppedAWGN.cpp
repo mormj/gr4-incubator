@@ -66,8 +66,8 @@ const boost::ut::suite<"SNRSteppedAWGN"> snrSteppedTests = [] {
         awgn.seed             = uint64_t{42};
         auto&     snk  = graph.emplaceBlock<gr::incubator::basic::VectorSink<std::complex<float>>>();
 
-        expect(graph.connect<"out">(src).to<"in">(awgn) == gr::ConnectionResult::SUCCESS);
-        expect(graph.connect<"out">(awgn).to<"in">(snk) == gr::ConnectionResult::SUCCESS);
+        expect(graph.connect<"out", "in">(src, awgn).has_value());
+        expect(graph.connect<"out", "in">(awgn, snk).has_value());
 
         gr::scheduler::Simple sched;
         expect(sched.exchange(std::move(graph)).has_value());
@@ -96,8 +96,8 @@ const boost::ut::suite<"SNRSteppedAWGN"> snrSteppedTests = [] {
         awgn.seed             = uint64_t{1};
         auto&     snk  = graph.emplaceBlock<gr::incubator::basic::VectorSink<std::complex<float>>>();
 
-        expect(graph.connect<"out">(src).to<"in">(awgn) == gr::ConnectionResult::SUCCESS);
-        expect(graph.connect<"out">(awgn).to<"in">(snk) == gr::ConnectionResult::SUCCESS);
+        expect(graph.connect<"out", "in">(src, awgn).has_value());
+        expect(graph.connect<"out", "in">(awgn, snk).has_value());
 
         gr::scheduler::Simple sched;
         expect(sched.exchange(std::move(graph)).has_value());

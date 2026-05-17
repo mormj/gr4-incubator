@@ -142,8 +142,8 @@ const boost::ut::suite<"RayleighFadingChannel graph"> rayleighGraphTests = [] {
         ch.seed        = uint64_t{42u};
         auto&     snk = graph.emplaceBlock<gr::incubator::basic::VectorSink<std::complex<float>>>();
 
-        expect(graph.connect<"out">(src).to<"in">(ch) == gr::ConnectionResult::SUCCESS) << "src→ch";
-        expect(graph.connect<"out">(ch).to<"in">(snk) == gr::ConnectionResult::SUCCESS) << "ch→snk";
+        expect(graph.connect<"out", "in">(src, ch).has_value()) << "src→ch";
+        expect(graph.connect<"out", "in">(ch, snk).has_value()) << "ch→snk";
 
         gr::scheduler::Simple sched;
         expect(sched.exchange(std::move(graph)).has_value());
@@ -168,8 +168,8 @@ const boost::ut::suite<"RayleighFadingChannel graph"> rayleighGraphTests = [] {
         ch.seed        = uint64_t{1u};
         auto&     snk = graph.emplaceBlock<gr::incubator::basic::VectorSink<std::complex<float>>>();
 
-        expect(graph.connect<"out">(src).to<"in">(ch) == gr::ConnectionResult::SUCCESS);
-        expect(graph.connect<"out">(ch).to<"in">(snk) == gr::ConnectionResult::SUCCESS);
+        expect(graph.connect<"out", "in">(src, ch).has_value());
+        expect(graph.connect<"out", "in">(ch, snk).has_value());
 
         gr::scheduler::Simple sched;
         expect(sched.exchange(std::move(graph)).has_value());

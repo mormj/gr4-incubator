@@ -35,10 +35,10 @@ int main() {
         gr::property_map{{"loop_bw", 0.01f}, {"damping", 0.707f}});
     auto& snk  = graph.emplaceBlock<gr::incubator::basic::VectorSink<std::complex<float>>>({});
 
-    graph.connect<"out">(src).to<"in">(att);
-    graph.connect<"out">(att).to<"in">(agc);
-    graph.connect<"out">(agc).to<"in">(loop);
-    graph.connect<"out">(loop).to<"in">(snk);
+    graph.connect<"out", "in">(src, att);
+    graph.connect<"out", "in">(att, agc);
+    graph.connect<"out", "in">(agc, loop);
+    graph.connect<"out", "in">(loop, snk);
 
     gr::scheduler::Simple sched;
     sched.exchange(std::move(graph));

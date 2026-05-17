@@ -101,7 +101,7 @@ const boost::ut::suite<"HistogramSink graph"> histogramSinkGraphTests = [] {
         auto& src = graph.emplaceBlock<gr::incubator::basic::VectorSource<std::complex<float>>>();
         src.data   = data;
         auto& snk = graph.emplaceBlock<gr::incubator::measure::HistogramSink<float>>();
-        expect(graph.connect<"out">(src).to<"in">(snk) == gr::ConnectionResult::SUCCESS)
+        expect(graph.connect<"out", "in">(src, snk).has_value())
             << "VectorSource → HistogramSink";
     };
 };

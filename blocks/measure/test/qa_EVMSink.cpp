@@ -169,8 +169,8 @@ const boost::ut::suite<"EVMSink graph"> evmGraphTests = [] {
         auto& src2 = graph.emplaceBlock<gr::incubator::basic::VectorSource<std::complex<float>>>();
         src2.data   = ref;
         auto& snk  = graph.emplaceBlock<gr::incubator::measure::EVMSink<float>>();
-        expect(graph.connect<"out">(src1).to<"in">(snk) == gr::ConnectionResult::SUCCESS);
-        expect(graph.connect<"out">(src2).to<"reference">(snk) == gr::ConnectionResult::SUCCESS);
+        expect(graph.connect<"out", "in">(src1, snk).has_value());
+        expect(graph.connect<"out", "reference">(src2, snk).has_value());
     };
 
     "graph: perfect symbols → evm_rms near zero"_test = [] {
@@ -185,8 +185,8 @@ const boost::ut::suite<"EVMSink graph"> evmGraphTests = [] {
         auto& src2 = graph.emplaceBlock<gr::incubator::basic::VectorSource<std::complex<float>>>();
         src2.data   = v;
         auto& snk  = graph.emplaceBlock<gr::incubator::measure::EVMSink<float>>();
-        expect(graph.connect<"out">(src1).to<"in">(snk) == gr::ConnectionResult::SUCCESS);
-        expect(graph.connect<"out">(src2).to<"reference">(snk) == gr::ConnectionResult::SUCCESS);
+        expect(graph.connect<"out", "in">(src1, snk).has_value());
+        expect(graph.connect<"out", "reference">(src2, snk).has_value());
 
         gr::scheduler::Simple sched;
         expect(sched.exchange(std::move(graph)).has_value());
@@ -212,8 +212,8 @@ const boost::ut::suite<"EVMSink graph"> evmGraphTests = [] {
         auto& src2 = graph.emplaceBlock<gr::incubator::basic::VectorSource<std::complex<float>>>();
         src2.data   = ref;
         auto& snk  = graph.emplaceBlock<gr::incubator::measure::EVMSink<float>>();
-        expect(graph.connect<"out">(src1).to<"in">(snk) == gr::ConnectionResult::SUCCESS);
-        expect(graph.connect<"out">(src2).to<"reference">(snk) == gr::ConnectionResult::SUCCESS);
+        expect(graph.connect<"out", "in">(src1, snk).has_value());
+        expect(graph.connect<"out", "reference">(src2, snk).has_value());
 
         gr::scheduler::Simple sched;
         expect(sched.exchange(std::move(graph)).has_value());
